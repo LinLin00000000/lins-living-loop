@@ -8,8 +8,8 @@ Read:
 
 Write:
 - <dop-workdir>/output/00-index.md
-- <dop-workdir>/output/01_synthesis.md or another mission-specific primary deliverable
-- <dop-workdir>/output/90-error-report.md (append-only workflow/runtime errors and repairs; say none if no meaningful workflow errors occurred)
+- <dop-workdir>/output/01-synthesis.md or another mission-specific primary deliverable
+- <dop-workdir>/output/90-error-report.md (append-only internal workflow/runtime abnormalities and repairs; say none if no meaningful workflow errors occurred)
 - <dop-workdir>/output/91-traceability.md (append-only claim/source/change trace map)
 - <dop-workdir>/output/99-next-steps.md (mutable current next actions)
 - <dop-workdir>/internal/agents/<task-id>/handoff.md if assigned a task id
@@ -25,7 +25,7 @@ Rules:
 - Keep final synthesis useful without requiring the user to read intermediate files.
 - Number human-facing deliverables with two-digit prefixes so directory listings preserve reading order.
 - Ensure output/00-index.md mentions every file in output/.
-- Keep output/90-error-report.md and output/91-traceability.md append-only with local-timezone timestamped entries; do not put normal user goals/scope additions into the error report; update output/99-next-steps.md to the current state.
+- Keep output/90-error-report.md and output/91-traceability.md append-only with local-timezone timestamped entries; put only internal workflow/runtime abnormalities and repairs in the error report, not normal user goals/scope additions; update output/99-next-steps.md to the current state.
 - Use Markdown links: relative links for workdir-generated files, URLs/absolute paths for stable external resources, and plain text for temporary external files likely to move.
 - Do not edit shared state files unless the task explicitly grants ownership.
 - Chat response should only be a short handoff pointing to written files.

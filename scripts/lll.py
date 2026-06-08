@@ -283,7 +283,7 @@ status: initialized
 
 ## Expected outputs
 - output/00-index.md: indexes every file in output/
-- output/90-error-report.md: append-only errors/corrections/self-maintenance log; says none if no errors occurred
+- output/90-error-report.md: append-only internal workflow/runtime abnormalities, repairs, and self-maintenance log; says none if no workflow/runtime errors occurred
 - output/91-traceability.md: append-only claim/source/change trace map
 - output/99-next-steps.md: mutable current next actions for the user
 - output/01-<file>.md: primary human-facing deliverable when needed

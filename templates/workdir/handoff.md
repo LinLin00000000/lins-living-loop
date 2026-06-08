@@ -9,7 +9,7 @@ validation: <PASS|PASS_WITH_NOTES|FAIL>
 ## Main human outputs
 - [output/00-index.md](../output/00-index.md): reading order and links
 - [output/01-<file>.md](../output/01-<file>.md): <description>
-- [output/90-error-report.md](../output/90-error-report.md): errors/corrections/self-maintenance
+- [output/90-error-report.md](../output/90-error-report.md): internal workflow/runtime abnormalities, repairs, and self-maintenance notes
 - [output/91-traceability.md](../output/91-traceability.md): claim/source/change trace map
 - [output/99-next-steps.md](../output/99-next-steps.md): current next actions
 

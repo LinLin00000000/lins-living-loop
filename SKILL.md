@@ -118,7 +118,7 @@ Canonical v2 layout for new workdirs:
     00-index.md                  # required table of contents; indexes every output file
     01-<deliverable>.md          # primary numbered deliverables for stable sorting
     02-<deliverable>.md
-    90-error-report.md           # required append-only errors/corrections/self-maintenance log
+    90-error-report.md           # required append-only internal workflow/runtime abnormalities, repairs, and self-maintenance log
     91-traceability.md           # required append-only claim/source/change trace map
     99-next-steps.md             # required mutable current next actions
 ```
@@ -134,7 +134,7 @@ Do not migrate old workdirs unless the user asks or migration itself is the task
 Number human-facing outputs in `output/` with two-digit prefixes so file listings preserve reading order:
 - `00-index.md`: must index every file in `output/`, including audit and next-step files.
 - `01`-`89`: primary reports, summaries, decisions, source notes, designs, or user-facing artifacts.
-- `90-error-report.md`: append-only error/correction/self-iteration report. Create it by default; if no errors occurred, say so explicitly.
+- `90-error-report.md`: append-only internal workflow/runtime abnormality, repair, and self-iteration report. Create it by default; if no such workflow/runtime errors occurred, say so explicitly.
 - `91-traceability.md`: append-only mapping from claims/changes to evidence, commands, files, validation notes, or assumptions.
 - `92`-`98`: optional audit/debug/review files.
 - `99-next-steps.md`: mutable current recommendations for what the user can do next.
@@ -377,7 +377,7 @@ If `FAIL`, write concrete follow-up tasks and continue if possible. If `PASS_WIT
 
 Treat every editable skill as living procedural memory, not a static document.
 
-Create `output/90-error-report.md` by default for meaningful DOP runs, especially any run that changes workflows, skills, tools, or user-facing procedures. If no errors/corrections occurred, the file should explicitly say no meaningful errors were recorded. Do not omit the file just because everything went well.
+Create `output/90-error-report.md` by default for meaningful DOP runs, especially any run that changes workflows, skills, tools, or user-facing procedures. If no internal workflow/runtime abnormalities or repairs occurred, the file should explicitly say no meaningful workflow/runtime errors were recorded. Do not omit the file just because everything went well.
 
 During LLL, `output/90-error-report.md` records internal workflow/runtime abnormalities and their repairs, not the user's goals. Record failed assumptions, worker failures, adapter/quoting/tool issues, path-safety issues, validation failures, queue/registry drift, stale or missing skill guidance, weak triggers, and better verification methods. A user correction belongs here only when it reveals that the workflow violated an existing contract or made a wrong internal assumption. New user goals, scope additions, design decisions, and normal requirements belong in `mission.md` addenda, `internal/tasks.jsonl`, `output/91-traceability.md`, or a numbered deliverable instead. Small issues may be fixed directly, but meaningful workflow-relevant corrections should still be logged. Complex unresolved workflow issues or optional follow-up work should also appear in `output/99-next-steps.md`.
 
