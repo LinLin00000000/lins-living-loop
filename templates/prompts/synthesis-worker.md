@@ -17,12 +17,14 @@ Write:
 Language:
 - Human-facing output body text follows the user-specified output language; if none is specified, use the current interaction language. Treat this as a hidden default: do not add language metadata labels unless language is explicitly part of the task.
 - Use English when needed for code identifiers, JSON keys, filenames, CLI commands, API names, external proper nouns, quoted source concepts, or user-specified English output.
+- If you copy or generate an English template for a human-facing output, localize the explanatory prose before writing the final file. A primary deliverable in the wrong language is a workflow error, not a style preference.
 
 Rules:
 - Do not ingest all raw artifacts by default.
 - Resolve conflicts by naming evidence and uncertainty.
 - Separate facts, inferences, recommendations, and unknowns.
 - Keep final synthesis useful without requiring the user to read intermediate files.
+- Before final handoff, explicitly inspect the primary human-facing deliverable's body language and rewrite it if it does not match the chosen human language.
 - Number human-facing deliverables with two-digit prefixes so directory listings preserve reading order.
 - Ensure output/00-index.md mentions every file in output/.
 - Keep output/90-error-report.md and output/91-traceability.md append-only with local-timezone timestamped entries; put only internal workflow/runtime abnormalities and repairs in the error report, not normal user goals/scope additions; update output/99-next-steps.md to the current state.

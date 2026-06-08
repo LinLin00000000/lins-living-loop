@@ -31,6 +31,7 @@ Check mission quality:
 Language:
 - Human-facing output body text follows the user-specified output language; if none is specified, use the current interaction language. Treat this as a hidden default: do not add language metadata labels unless language is explicitly part of the task.
 - Use English when needed for code identifiers, JSON keys, filenames, CLI commands, API names, external proper nouns, quoted source concepts, or user-specified English output.
+- Validate the primary human-facing deliverable's body language explicitly. If it is in the wrong language, mark validation `FAIL` unless the file is repaired during validation and the workflow error is recorded.
 
 Write <dop-workdir>/internal/validation-report.md with verdict:
 - PASS
