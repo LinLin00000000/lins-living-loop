@@ -150,6 +150,42 @@ Link aggressively but only when links will stay useful:
 - Do not hyperlink external temporary/user-mentioned files if their location may move; mention them as plain text with enough identifying context instead.
 - Prefer `output/91_traceability.md` for audit-grade traceability. If sources themselves are a primary user deliverable, create a normal `02_sources.md` as well and still keep claim-level traceability in `91_traceability.md`.
 
+
+## Project and source-of-truth hygiene
+
+When LLL is used to create, publish, or maintain a reusable skill, GitHub repo, package, or long-lived project, keep work records and project source code separate:
+
+- `~/lll-work/` is for LLL run/work records only: `mission.md`, `internal/`, `output/`, logs, handoffs, temporary inputs, and validation records.
+- Do not put a long-lived Git repo directly under `~/lll-work/` unless the user explicitly asks. Default reusable projects/repos to `~/projects/<repo-slug>/` or a user-specified project directory.
+- If a local installed skill should track a canonical repo, prefer a symlink from the installed skill path to the canonical repo over copying the repo into multiple skill directories. Multiple copies drift and can make skill loading ambiguous.
+- Avoid duplicate installed skills with the same `name` frontmatter across local skill roots. If duplicates are required for different runtimes, document which one is canonical and keep the others as symlinks or generated copies.
+- Legacy names such as DOP may remain as thin aliases or compatibility shims, but they should not become a second source of truth for the same living workflow.
+
+## Reuse/correction archival discipline
+
+On a reused workspace, especially after the user points out mistakes or asks for corrections, the conversation is not the archive. The workspace is.
+
+- Create or update a numbered human-facing deliverable under `output/` for the new correction, phase, or decision. For example: `output/03_workflow_correction_and_source_of_truth_repair.md`.
+- Update `output/00_index.md` so the newest/current deliverable is discoverable.
+- Append to `output/90_error_report.md` for workflow mistakes, wrong assumptions, failed commands, missing records, or repairs.
+- Append to `output/91_traceability.md` with evidence for claims, file moves, commits, validation commands, and install checks.
+- Update `output/99_next_steps.md` to the current next actions; do not leave stale previous recommendations as the latest state.
+- The final chat response should summarize and link paths; it should not be the only place where the result exists.
+
+## Worker record completeness
+
+A task marked `done` in `internal/tasks.jsonl` or `internal/agent_registry.md` must have a non-empty `internal/agents/<task-id>/` record. At minimum include:
+
+```text
+internal/agents/<task-id>/
+  task.md
+  log.txt
+  handoff.md
+  status.json
+```
+
+This applies even when the “worker” was the supervisor doing the work inline rather than a spawned subagent. Empty done directories are a workflow error: repair them before final delivery, and record the repair in `output/90_error_report.md`.
+
 ## Human deliverable lifecycle on reuse
 
 Use a mixed strategy instead of always appending to one final report or always creating a new file:
@@ -212,7 +248,7 @@ Do not violate these:
 
 ## Naming and product-surface evolution
 
-The public name and metaphor may evolve without changing the core protocol. When the user asks about renaming or publicly packaging DOP as Lin's Living Loop / LLL, or about making the workflow feel more "Living" and less like a cold protocol, first load `references/lins-living-loop-renaming.md`. Treat `Lin's Living Loop` as a serious draft direction centered on living work, repair, continuation, and self-iteration. If the user asks for analysis only or says not to modify the skill yet, create a fresh draft workspace (prefer `~/lll-work/<timestamp>_<slug>/`) and do not patch live skill files until explicitly approved. Keep old DOP names and `~/lll-work/` directories compatible during any transition.
+The public name and metaphor may evolve without changing the core protocol. When the user asks about renaming or publicly packaging DOP as Lin's Living Loop / LLL, or about making the workflow feel more "Living" and less like a cold protocol, first load `references/lins-living-loop-renaming.md`. Treat `Lin's Living Loop` as a serious draft direction centered on living work, repair, continuation, and self-iteration. If the user asks for analysis only or says not to modify the skill yet, create a fresh draft workspace (prefer `~/lll-work/<timestamp>_<slug>/`) and do not patch live skill files until explicitly approved. Keep old DOP names and historical `~/dop-work/` directories compatible during any transition; use `~/lll-work/` for new work records.
 
 ## Runtime environment and adapters
 

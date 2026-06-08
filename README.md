@@ -87,6 +87,12 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 | Hand off | 更新 `internal/handoff.md` 和 `internal/recovery_state.md` |
 | Grow or Close | 更新 `output/99_next_steps.md`，决定继续还是收束 |
 
+## 名称和 slug
+
+展示名使用 **Lin's Living Loop / LLL**。仓库和 skill slug 使用 `lins-living-loop`，是为了保持 URL、shell、安装命令和 registry 搜索的稳定；apostrophe 在命令行里需要转义，不适合作为包名。
+
+长期源码目录建议放在 `~/projects/lins-living-loop`。`~/lll-work/` 只放一次次 LLL 运行的工作记录，不作为项目源码仓库。
+
 ## helper 脚本
 
 `scripts/lll.py` 是一个很薄的 stdlib helper，不运行 agent，只帮你维护文件协议。

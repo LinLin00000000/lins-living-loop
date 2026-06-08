@@ -81,6 +81,12 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 | Hand off | Refresh `internal/handoff.md` and `internal/recovery_state.md` |
 | Grow or Close | Update `output/99_next_steps.md` and decide whether to continue or close |
 
+## Name and slug
+
+The display name is **Lin's Living Loop / LLL**. The repository and skill slug use `lins-living-loop` because it is URL-safe, shell-safe, and registry-friendly; an apostrophe in a package/repo name creates quoting and escaping friction.
+
+For local development, keep the canonical source repo under a project directory such as `~/projects/lins-living-loop`. Use `~/lll-work/` for LLL run records, not long-lived source repos.
+
 ## Helper script
 
 `scripts/lll.py` is a thin stdlib helper. It does not run agents. It only helps maintain the file protocol.
