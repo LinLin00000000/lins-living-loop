@@ -2,3 +2,10 @@ __pycache__/
 *.pyc
 .DS_Store
 node_modules/
+
+# Local/private skill overlay; never publish user/environment preferences.
+SKILL.local.md
+
+# Installed-skill manager/runtime artifacts. The canonical repo root is the skill package.
+.claude/
+skills-lock.json

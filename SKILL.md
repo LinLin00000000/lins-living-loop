@@ -163,10 +163,11 @@ When LLL is used to create, publish, or maintain a reusable skill, GitHub repo, 
 
 ## Reuse/correction archival discipline
 
-On a reused workspace, especially after the user points out mistakes or asks for corrections, the conversation is not the archive. The workspace is.
+On a reused workspace, especially after the user points out mistakes or asks for corrections, the conversation is not the archive. The workspace is. The goal is human-recoverable state, not creating a new file for every chat turn.
 
-- Create or update a numbered human-facing deliverable under `output/` for the new correction, phase, or decision. For example: `output/03_workflow_correction_and_source_of_truth_repair.md`.
-- Update `output/00_index.md` so the newest/current deliverable is discoverable.
+- Keep the current human-facing state recoverable from `output/`: update the relevant numbered deliverable, audit file, index, or next-step file so the latest conclusion is not trapped in chat.
+- Do not mechanically create a new numbered deliverable for every reuse/correction. Use the human deliverable lifecycle below: small corrections update the existing primary deliverable plus traceability as needed; a new `02_*`, `03_*`, etc. is only for an independently readable analysis, decision, evidence packet, task result, or phase conclusion.
+- Update `output/00_index.md` whenever the recommended reading entry, current conclusion, or output file list changes.
 - Append to `output/90_error_report.md` for workflow mistakes, wrong assumptions, failed commands, missing records, or repairs.
 - Append to `output/91_traceability.md` with evidence for claims, file moves, commits, validation commands, and install checks.
 - Update `output/99_next_steps.md` to the current next actions; do not leave stale previous recommendations as the latest state.
@@ -256,21 +257,59 @@ Do not hardcode the user's agent stack into LLL's core. Before choosing carriers
 
 Keep DOP portable: the skill describes the protocol; environment-specific mappings live in memory, project rules, wrapper scripts, presets, or adapter references. Concrete Hermes/Codex/cron/Kanban mappings are useful examples when configured, not universal requirements.
 
+## Optional local skill memory
+
+LLL's public skill stays portable. User-specific and environment-specific preferences may live in a single optional local overlay file next to `SKILL.md`:
+
+```text
+SKILL.local.md
+```
+
+This file is local-only and should be gitignored. If it exists, read it near the start of nontrivial LLL work after `SKILL.md`; if it does not exist, continue without asking the user to create it. Treat it as defaults and context, not as the run's source of truth. When a local preference materially affects the current run, copy the relevant decision into `mission.md`, `output/91_traceability.md`, or `internal/handoff.md` so recovery does not depend on hidden local state.
+
+Before writing any durable preference, identify the user's real intent and choose the right layer:
+
+| Preference type | Write to |
+|---|---|
+| LLL-specific workflow preferences, local environment facts, adapter choices, or recurring skill-use defaults | `SKILL.local.md` |
+| General user preferences that apply across many skills or tasks, such as tool-selection philosophy or communication style | the agent's global user memory/profile |
+| General LLL defects, weak triggers, missing pitfalls, better verification, or portable workflow improvements | `SKILL.md` or a tracked reference/template |
+| Current task facts, decisions, evidence, and validation state | the current LLL workdir |
+
+If the layer is unclear, ask the user a short clarification question instead of guessing. Keep entries compact, declarative, and durable; do not store secrets, transient task progress, commit hashes, PR numbers, or stale-in-a-week artifacts.
+
+Recommended `SKILL.local.md` shape:
+
+```markdown
+# Local memory for Lin's Living Loop
+
+<!-- Local-only. Gitignored. Separate entries with a line containing only: ⟲ -->
+
+LLL-specific preference or environment fact, written as one concise declarative note.
+
+⟲
+
+Another concise note.
+```
+
+Use `⟲` as the entry separator: it evokes the living loop, is uncommon in normal prose, and avoids overloading the section sign used by some agent memory stores.
+
 ## Execution flow
 
 1. Clarify only if missing information would make the work unsafe or obviously wrong.
 2. State important side effects briefly: file writes, network/API calls, background processes, code execution, Git changes, external services.
-3. Create a fresh workdir by default, or resume only with a clear reuse signal.
-4. Decompose into orthogonal tasks with explicit outputs and acceptance checks.
-5. Choose the lightest carrier for each task.
-6. Launch work; make workers write files and return short handoffs.
-7. Keep supervisor context small: read `mission.md`, `internal/` queue/registry/handoffs, `output/` synthesis/audit files, validation, and selected artifacts only when needed.
-8. Synthesize from files.
-9. Validate independently.
-10. Record errors/lessons and self-maintenance actions in `output/90_error_report.md` even when issues were fixed inline.
-11. Before final packaging, check that `output/` body text follows the user-specified output language or current interaction language, without surfacing language metadata unless language itself is part of the task.
-12. Ensure `mission.md`, `output/00_index.md`, `output/91_traceability.md`, and `output/99_next_steps.md` are current before final delivery.
-13. Final reply points to deliverables and a short conclusion.
+3. If `SKILL.local.md` exists next to this `SKILL.md`, read it for local/user-specific defaults; otherwise skip it silently.
+4. Create a fresh workdir by default, or resume only with a clear reuse signal.
+5. Decompose into orthogonal tasks with explicit outputs and acceptance checks.
+6. Choose the lightest carrier for each task.
+7. Launch work; make workers write files and return short handoffs.
+8. Keep supervisor context small: read `mission.md`, `internal/` queue/registry/handoffs, `output/` synthesis/audit files, validation, and selected artifacts only when needed.
+9. Synthesize from files.
+10. Validate independently.
+11. Record errors/lessons and self-maintenance actions in `output/90_error_report.md` even when issues were fixed inline.
+12. Before final packaging, check that `output/` body text follows the user-specified output language or current interaction language, without surfacing language metadata unless language itself is part of the task.
+13. Ensure `mission.md`, `output/00_index.md`, `output/91_traceability.md`, and `output/99_next_steps.md` are current before final delivery.
+14. Final reply points to deliverables and a short conclusion.
 
 ## Progress updates
 
