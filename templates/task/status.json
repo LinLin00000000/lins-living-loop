@@ -1,0 +1,10 @@
+{
+  "task_id": "<T001>",
+  "status": "pending",
+  "current_step": "not started",
+  "attempts": 0,
+  "last_checkpoint": null,
+  "last_error": null,
+  "outputs": [],
+  "updated_at": "<ISO-8601>"
+}

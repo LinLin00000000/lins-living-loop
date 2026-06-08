@@ -1,0 +1,23 @@
+{
+  "skill_name": "lins-living-loop",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "用 LLL 做一次关于本地优先数字花园架构的深度调研，要求可恢复、并行，并最终给我文件位置。",
+      "expected_output": "Creates/uses a LLL workdir, decomposes tasks, chooses durable carriers, writes handoffs, validates, and returns concise paths.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "帮我快速回答一下 pnpm 和 npm 的区别，不用展开。",
+      "expected_output": "Does not trigger full LLL; gives a concise direct answer.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "这个仓库要做一轮大重构，代码交给 Codex，通用调研和验收交给当前可用的 agent，过程不能因为上下文爆炸而丢。",
+      "expected_output": "Triggers LLL, uses Codex as code carrier, current/host agent for research/validation, file queue/checkpoints, and independent validation.",
+      "files": []
+    }
+  ]
+}

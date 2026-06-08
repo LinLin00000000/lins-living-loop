@@ -1,0 +1,20 @@
+{
+  "name": "lins-living-loop",
+  "version": "1.0.0",
+  "description": "A tiny file-backed living loop for durable AI-agent work. Formerly DOP.",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LinLin00000000/lins-living-loop.git"
+  },
+  "keywords": [
+    "skills",
+    "ai-agents",
+    "agent-skills",
+    "orchestration",
+    "durable-workflows",
+    "lll",
+    "dop"
+  ]
+}
