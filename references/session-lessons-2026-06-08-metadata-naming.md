@@ -4,9 +4,9 @@ This note records a LLL self-maintenance pass from 2026-06-08. Use it when chang
 
 ## What changed
 
-- New LLL workdirs should use `~/lll-work/YYYYMMDD_HHMMSS_slug/`; old `~/dop-work/` remains a compatibility root for historical DOP runs.
-- Use `_` between date and time and another `_` before the slug.
-- Avoid new defaults like `YYYYMMDD-HHMMSS_slug`; mixed timestamp separators are visually noisy and make directory listings harder to scan.
+- New LLL workdirs should use `~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case/`; old `~/dop-work/` remains a compatibility root for historical DOP runs.
+- Use `-` between date and time, then `_` before the slug: timestamp + semantic description.
+- Avoid new defaults like `YYYYMMDD_HHMMSS_short-description-in-kebab-case`; the second underscore makes the name look like three fields instead of timestamp + description.
 - Historical workdirs remain valid; do not bulk-rename old workdirs unless the user explicitly asks for a migration pass.
 
 ## Markdown metadata rendering lesson
@@ -22,11 +22,11 @@ status: initialized
 Apply this to generated/templated files such as:
 
 - `mission.md`
-- `output/90_error_report.md`
-- `output/91_traceability.md`
-- `output/99_next_steps.md`
-- `internal/recovery_state.md`
-- `internal/validation_report.md`
+- `output/90-error-report.md`
+- `output/91-traceability.md`
+- `output/99-next-steps.md`
+- `internal/recovery-state.md`
+- `internal/validation-report.md`
 - `internal/handoff.md`
 - `internal/agents/<task-id>/task.md`
 - `internal/agents/<task-id>/handoff.md`
@@ -41,10 +41,10 @@ When changing this surface, run a full helper/template smoke test rather than a 
 4. Inspect the generated top sections and assert ` ```text ` appears near the top of metadata-bearing files.
 5. Transitional v1 smoke: construct `collab/` + `readable/`, then `validate`, `checkpoint`, `validate`.
 6. Legacy smoke: construct root `tasks.jsonl` + `deliverables/`, then `validate`, `checkpoint`, `validate`.
-7. Search for stale `YYYYMMDD-HHMMSS` examples; remaining mentions should be explicit negative examples or historical compatibility notes.
+7. Search for stale `YYYYMMDD_HHMMSS` examples; remaining mentions should be explicit negative examples or historical compatibility notes.
 
 ## Pitfalls
 
-- `output/00_index.md` must list itself as well as every other file in `output/`; final structure validation will catch this.
-- If the skill directory is not a git repository, do not rely on `git diff` as evidence. Record changed files and smoke-test evidence in `output/91_traceability.md` / `internal/validation_report.md` instead.
+- `output/00-index.md` must list itself as well as every other file in `output/`; final structure validation will catch this.
+- If the skill directory is not a git repository, do not rely on `git diff` as evidence. Record changed files and smoke-test evidence in `output/91-traceability.md` / `internal/validation-report.md` instead.
 - Broad file searches inside tool wrappers can produce oversized outputs. If a broad search fails, narrow the pattern or read bounded file sections; the durable lesson is the bounded-inspection pattern, not a permanent claim that the tool is broken.

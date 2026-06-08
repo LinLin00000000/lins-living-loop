@@ -65,7 +65,7 @@ For LLL missions that change Hermes itself:
 1. Load the `hermes-agent` skill before answering or acting.
 2. State side effects clearly: config write, credential write, gateway restart, tool enable/disable, profile mutation, service change.
 3. Prefer domain commands over file patches.
-4. If a direct file-tool write is blocked, do not fight the guard; switch to the owning CLI/tool path and record the fallback in `internal/agents/<task-id>/log.txt` or `output/90_error_report.md`.
+4. If a direct file-tool write is blocked, do not fight the guard; switch to the owning CLI/tool path and record the fallback in `internal/agents/<task-id>/log.txt` or `output/90-error-report.md`.
 5. For multi-profile tasks, identify the active profile and target profile before writing. Use `cross_profile=True` only after explicit user direction and only for profile-scoped areas where that flag applies.
 6. Validate by reading non-secret config/status output, checking command exit codes, and restarting or starting a fresh session when the changed setting is startup-scoped.
 7. Keep secrets out of LLL artifacts. Store only key names, presence/absence, command exit codes, redacted values, or paths.

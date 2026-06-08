@@ -2,7 +2,7 @@
 
 | id | role | carrier | preset | status | task(s) | output | notes |
 |---|---|---|---|---|---|---|---|
-| supervisor | decomposes, routes, validates, reports | current | default | active | all | [output/00_index.md](../output/00_index.md) | owns queue and final decisions |
+| supervisor | decomposes, routes, validates, reports | current | default | active | all | [output/00-index.md](../output/00-index.md) | owns queue and final decisions |
 
 ## Adapter availability
 

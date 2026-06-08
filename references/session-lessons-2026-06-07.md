@@ -27,7 +27,7 @@ Good phrasing:
 
 ## Skill-build pitfall found and fixed
 
-The first version of `scripts/dop.py init` overwrote existing `mission.md` and the layout-specific `recovery_state.md`. That violates LLL's durable recovery principle.
+The first version of `scripts/dop.py init` overwrote existing `mission.md` and the layout-specific `recovery-state.md`. That violates LLL's durable recovery principle.
 
 Correct behavior:
 

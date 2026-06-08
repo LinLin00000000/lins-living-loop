@@ -11,7 +11,7 @@ Use this reference when a LLL run is optimizing the workflow/product surface its
 
 ## Error Report scope
 
-`output/90_error_report.md` is for workflow/runtime abnormalities, not for restating the user's goals.
+`output/90-error-report.md` is for workflow/runtime abnormalities, not for restating the user's goals.
 
 Record:
 - failed assumptions;
@@ -21,16 +21,16 @@ Record:
 - abnormal recovery steps;
 - fixes applied and follow-up hardening items.
 
-Do **not** record normal user requirements, new goals, scope additions, or product decisions as errors. Put those in `mission.md` addenda, `internal/tasks.jsonl`, `output/91_traceability.md`, or a numbered deliverable.
+Do **not** record normal user requirements, new goals, scope additions, or product decisions as errors. Put those in `mission.md` addenda, `internal/tasks.jsonl`, `output/91-traceability.md`, or a numbered deliverable.
 
 ## Reused workspace output strategy
 
 When a LLL workspace is reused:
 
-- Update `01_*` when the new work is a small correction, clarification, refinement, or convergence of the same main deliverable.
-- Create `02_*`, `03_*`, etc. when the new work is an independently readable analysis, decision, phase result, or substantial add-on.
-- Keep `00_index.md` as the navigation layer. It should tell the reader which file is the current recommended entry point and what each numbered deliverable is for.
-- Do not force all history into `01_final_report.md`; it should carry the current main conclusion, not become a changelog.
+- Update `01-*` when the new work is a small correction, clarification, refinement, or convergence of the same main deliverable.
+- Create `02-*`, `03-*`, etc. when the new work is an independently readable analysis, decision, phase result, or substantial add-on.
+- Keep `00-index.md` as the navigation layer. It should tell the reader which file is the current recommended entry point and what each numbered deliverable is for.
+- Do not force all history into `01-final-report.md`; it should carry the current main conclusion, not become a changelog.
 
 ## Analyze-only guardrail
 

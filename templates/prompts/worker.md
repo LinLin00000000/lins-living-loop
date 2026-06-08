@@ -10,7 +10,7 @@ Write:
 - <dop-workdir>/internal/agents/<task-id>/artifacts/<your outputs>
 - <dop-workdir>/internal/agents/<task-id>/handoff.md
 - <dop-workdir>/internal/agents/<task-id>/status.json if you have file access
-- <dop-workdir>/output/NN_<deliverable>.md only if explicitly assigned a human-facing deliverable; if you do this, update or request an update to output/00_index.md
+- <dop-workdir>/output/NN-<deliverable>.md only if explicitly assigned a human-facing deliverable; if you do this, update or request an update to output/00-index.md
 
 Language:
 - Default to the user's language / current interaction language for worker-facing prose and intermediate descriptions.
@@ -20,7 +20,7 @@ Rules:
 - Keep detailed work in files, not chat.
 - Write only inside <dop-workdir>/internal/agents/<task-id>/ unless explicitly assigned a shared human-facing deliverable under <dop-workdir>/output/.
 - Raw/reference material introduced during the task should go under the task's artifacts/ or <dop-workdir>/internal/inputs/, not the workdir root.
-- Do not edit shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent_registry.md`, `internal/recovery_state.md`) unless the task explicitly grants ownership and provides a lock/runner API.
+- Do not edit shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md`) unless the task explicitly grants ownership and provides a lock/runner API.
 - Record commands, sources, decisions, failures, and retries.
 - If blocked, write attempted fixes and proposed fallback.
 - Keep claims traceable to artifact paths, sources, commands, or validation notes; use Markdown links for stable references.

@@ -15,10 +15,10 @@ Session lesson: human-facing `output/` files are the user's reading surface. The
 
 On workspace reuse, choose the output file by semantic boundary:
 
-- Update `01_final_report.md` / the primary `01_*` deliverable for corrections, clarifications, style cleanup, small supplements, or rewrites of the same deliverable.
-- Create `02_*`, `03_*`, etc. for independently readable analyses, decisions, new evidence packets, new task results, or new phase conclusions.
-- Keep `00_index.md` as the navigation layer that names the current recommended reading entry.
-- Keep audit history in `91_traceability.md`; keep workflow/runtime failures in `90_error_report.md`; do not overload the final report as a transcript.
+- Update `01-final-report.md` / the primary `01-*` deliverable for corrections, clarifications, style cleanup, small supplements, or rewrites of the same deliverable.
+- Create `02-*`, `03-*`, etc. for independently readable analyses, decisions, new evidence packets, new task results, or new phase conclusions.
+- Keep `00-index.md` as the navigation layer that names the current recommended reading entry.
+- Keep audit history in `91-traceability.md`; keep workflow/runtime failures in `90-error-report.md`; do not overload the final report as a transcript.
 
 ## Append-only timestamp rule
 
@@ -26,8 +26,8 @@ Append-only files preserve audit order and support workspace reuse. Every append
 
 Applies to:
 
-- `output/90_error_report.md`
-- `output/91_traceability.md`
+- `output/90-error-report.md`
+- `output/91-traceability.md`
 - `internal/runs.jsonl`
 - `internal/logs/*.log`
 - `internal/agents/<task-id>/log.txt`
@@ -57,7 +57,7 @@ ts: 2026-06-08T13:12:00+08:00
 
 Internal history is useful, but full-log rereads are expensive and usually unnecessary. On resume:
 
-1. Read compact current-state files first: `mission.md`, `internal/recovery_state.md`, `internal/tasks.jsonl`, `internal/agent_registry.md`, task-local `status.json`, and task-local `handoff.md`.
+1. Read compact current-state files first: `mission.md`, `internal/recovery-state.md`, `internal/tasks.jsonl`, `internal/agent-registry.md`, task-local `status.json`, and task-local `handoff.md`.
 2. Read append-only history only by tail, task id, time window, or entries since the last checkpoint.
 3. If a log becomes important but large, create/update a compact snapshot or handoff instead of forcing future agents to ingest the full history.
 
@@ -79,4 +79,4 @@ Do not treat a SKILL.md policy as implemented until the generator surfaces are c
 - `templates/prompts/*`
 - relevant `references/*`
 - `mission.md`
-- the current workdir's `mission.md`, `output/00_index.md`, `90_error_report.md`, `91_traceability.md`, and `99_next_steps.md`
+- the current workdir's `mission.md`, `output/00-index.md`, `90-error-report.md`, `91-traceability.md`, and `99-next-steps.md`

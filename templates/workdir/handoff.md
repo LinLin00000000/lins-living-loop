@@ -7,11 +7,11 @@ validation: <PASS|PASS_WITH_NOTES|FAIL>
 ```
 
 ## Main human outputs
-- [output/00_index.md](../output/00_index.md): reading order and links
-- [output/01_<file>.md](../output/01_<file>.md): <description>
-- [output/90_error_report.md](../output/90_error_report.md): errors/corrections/self-maintenance
-- [output/91_traceability.md](../output/91_traceability.md): claim/source/change trace map
-- [output/99_next_steps.md](../output/99_next_steps.md): current next actions
+- [output/00-index.md](../output/00-index.md): reading order and links
+- [output/01-<file>.md](../output/01-<file>.md): <description>
+- [output/90-error-report.md](../output/90-error-report.md): errors/corrections/self-maintenance
+- [output/91-traceability.md](../output/91-traceability.md): claim/source/change trace map
+- [output/99-next-steps.md](../output/99-next-steps.md): current next actions
 
 ## One-line conclusion
 <short conclusion>
@@ -20,8 +20,8 @@ validation: <PASS|PASS_WITH_NOTES|FAIL>
 - <caveat or none>
 
 ## Suggested next actions
-- <optional next step; keep output/99_next_steps.md authoritative>
+- <optional next step; keep output/99-next-steps.md authoritative>
 
 ## Process traceability
-- [validation_report.md](validation_report.md): validation verdict
-- [agent_registry.md](agent_registry.md): worker/status map
+- [validation-report.md](validation-report.md): validation verdict
+- [agent-registry.md](agent-registry.md): worker/status map

@@ -23,7 +23,49 @@ VALID_STATUS = {"pending", "ready", "in_progress", "blocked", "done", "failed", 
 LAYOUT_V2 = "v2_internal_output"
 LAYOUT_V1 = "v1_collab_readable"
 LAYOUT_LEGACY = "legacy_root"
-RECOMMENDED_WORKDIR_PATTERN = "~/lll-work/YYYYMMDD_HHMMSS_slug/"
+RECOMMENDED_WORKDIR_PATTERN = "~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case/"
+
+# Canonical new Markdown filenames use kebab-case. Underscore aliases are kept
+# readable for old LLL/DOP workdirs; helpers prefer an existing alias when
+# resuming, but create canonical kebab-case files for new workdirs.
+AGENT_REGISTRY = "agent-registry.md"
+RECOVERY_STATE = "recovery-state.md"
+VALIDATION_REPORT = "validation-report.md"
+OUTPUT_INDEX = "00-index.md"
+ERROR_REPORT = "90-error-report.md"
+TRACEABILITY = "91-traceability.md"
+NEXT_STEPS = "99-next-steps.md"
+ALIASES = {
+    AGENT_REGISTRY: ["agent_registry.md"],
+    RECOVERY_STATE: ["recovery_state.md"],
+    VALIDATION_REPORT: ["validation_report.md"],
+    OUTPUT_INDEX: ["00_index.md"],
+    ERROR_REPORT: ["90_error_report.md"],
+    TRACEABILITY: ["91_traceability.md"],
+    NEXT_STEPS: ["99_next_steps.md"],
+}
+
+
+def existing_or_canonical(directory: Path, canonical: str) -> Path:
+    canonical_path = directory / canonical
+    if canonical_path.exists():
+        return canonical_path
+    for alias in ALIASES.get(canonical, []):
+        alias_path = directory / alias
+        if alias_path.exists():
+            return alias_path
+    return canonical_path
+
+
+def equivalent_names(name: str) -> List[str]:
+    """Return canonical/alias spellings accepted for compatibility checks."""
+    names = [name]
+    if name in ALIASES:
+        names.extend(ALIASES[name])
+    for canonical, aliases in ALIASES.items():
+        if name in aliases:
+            names.append(canonical)
+    return list(dict.fromkeys(names))
 
 
 def now() -> str:
@@ -76,7 +118,7 @@ def layout_kind(workdir: Path) -> str:
         return LAYOUT_V2
     if (workdir / "collab" / "tasks.jsonl").exists() or (workdir / "collab").exists() or (workdir / "readable").exists():
         return LAYOUT_V1
-    if any((workdir / name).exists() for name in ["tasks.jsonl", "runs.jsonl", "agent_registry.md", "agents", "deliverables"]):
+    if any((workdir / name).exists() for name in ["tasks.jsonl", "runs.jsonl", "agent-registry.md", "agent_registry.md", "agents", "deliverables"]):
         return LAYOUT_LEGACY
     return LAYOUT_V2
 
@@ -104,7 +146,7 @@ def output_dir(workdir: Path) -> Path:
 
 
 def recovery_path(workdir: Path) -> Path:
-    return state_dir(workdir) / "recovery_state.md" if layout_kind(workdir) == LAYOUT_V2 else workdir / "recovery_state.md"
+    return existing_or_canonical(state_dir(workdir), RECOVERY_STATE) if layout_kind(workdir) == LAYOUT_V2 else existing_or_canonical(workdir, RECOVERY_STATE)
 
 
 def handoff_path(workdir: Path) -> Path:
@@ -112,7 +154,7 @@ def handoff_path(workdir: Path) -> Path:
 
 
 def validation_path(workdir: Path) -> Path:
-    return state_dir(workdir) / "validation_report.md" if layout_kind(workdir) == LAYOUT_V2 else workdir / "validation_report.md"
+    return existing_or_canonical(state_dir(workdir), VALIDATION_REPORT) if layout_kind(workdir) == LAYOUT_V2 else existing_or_canonical(workdir, VALIDATION_REPORT)
 
 
 def rel_to_workdir(workdir: Path, path: Path) -> str:
@@ -128,7 +170,7 @@ def runs_path(workdir: Path) -> Path:
 
 
 def registry_path(workdir: Path) -> Path:
-    return state_dir(workdir) / "agent_registry.md"
+    return existing_or_canonical(state_dir(workdir), AGENT_REGISTRY)
 
 
 def worker_root_rel(workdir: Path) -> str:
@@ -227,8 +269,8 @@ status: initialized
 
 ## Success criteria
 - <observable criterion>
-- output/01_<final-file>.md or another primary output exists when the mission requires it
-- internal/validation_report.md is PASS or PASS_WITH_NOTES before final delivery
+- output/01-<final-file>.md or another primary output exists when the mission requires it
+- internal/validation-report.md is PASS or PASS_WITH_NOTES before final delivery
 
 ## Non-goals
 - <excluded work>
@@ -240,11 +282,11 @@ status: initialized
 - External services/accounts: <confirm if needed>
 
 ## Expected outputs
-- output/00_index.md: indexes every file in output/
-- output/90_error_report.md: append-only errors/corrections/self-maintenance log; says none if no errors occurred
-- output/91_traceability.md: append-only claim/source/change trace map
-- output/99_next_steps.md: mutable current next actions for the user
-- output/01_<file>.md: primary human-facing deliverable when needed
+- output/00-index.md: indexes every file in output/
+- output/90-error-report.md: append-only errors/corrections/self-maintenance log; says none if no errors occurred
+- output/91-traceability.md: append-only claim/source/change trace map
+- output/99-next-steps.md: mutable current next actions for the user
+- output/01-<file>.md: primary human-facing deliverable when needed
 
 ## Execution policy
 - Keep supervisor context small.
@@ -252,26 +294,26 @@ status: initialized
 - Raw inputs, cloned repos, long logs, validation, handoff, and recovery state stay under internal/.
 - Human-facing deliverables stay under output/ and use two-digit numeric prefixes.
 - Human-facing output body text follows the hidden default: the user-specified output language, or the current interaction language if none is specified. Do not add language metadata labels merely to announce the default; record language only when it is an explicit task constraint. Keep filenames, JSON keys, commands, API names, and code identifiers in English when useful.
-- Record state changes in mission.md, internal/tasks.jsonl, internal/runs.jsonl, and internal/recovery_state.md.
-- Keep output/00_index.md updated whenever output files are added/removed/renamed.
-- Keep output/90_error_report.md and output/91_traceability.md append-only with local-timezone ISO-8601/RFC3339 timestamped entries.
-- Rewrite output/99_next_steps.md as the current recommended next action changes.
+- Record state changes in mission.md, internal/tasks.jsonl, internal/runs.jsonl, and internal/recovery-state.md.
+- Keep output/00-index.md updated whenever output files are added/removed/renamed.
+- Keep output/90-error-report.md and output/91-traceability.md append-only with local-timezone ISO-8601/RFC3339 timestamped entries.
+- Rewrite output/99-next-steps.md as the current recommended next action changes.
 - Treat internal/runs.jsonl, internal/logs/*.log, and internal/agents/<task-id>/log.txt as append-only; read tails or task/time slices on resume instead of full logs unless needed.
 - Use Markdown links for stable references: relative links for files inside this workdir, URLs/absolute paths for stable external resources, and plain text for temporary external files whose location may move.
 - Validate before final delivery.
 
 ## Recovery quick start
 1. Read mission.md.
-2. Read internal/recovery_state.md.
+2. Read internal/recovery-state.md.
 3. Inspect mission.md updated_at/status and internal/tasks.jsonl status counts.
 4. Read relevant internal/agents/<task-id>/handoff.md files.
-5. Read output/00_index.md for human-facing deliverables.
+5. Read output/00-index.md for human-facing deliverables.
 6. Continue from the latest safe checkpoint.
 """
     existing_core = [
         name for name in [
-            "mission.md", "internal/tasks.jsonl", "internal/runs.jsonl", "internal/recovery_state.md",
-            "collab/tasks.jsonl", "collab/runs.jsonl", "tasks.jsonl", "runs.jsonl", "recovery_state.md",
+            "mission.md", "internal/tasks.jsonl", "internal/runs.jsonl", "internal/recovery-state.md", "internal/recovery_state.md",
+            "collab/tasks.jsonl", "collab/runs.jsonl", "tasks.jsonl", "runs.jsonl", "recovery-state.md", "recovery_state.md",
         ] if (wd / name).exists()
     ]
     if existing_core and not args.force:
@@ -284,13 +326,13 @@ status: initialized
     init_files = {
         "internal/tasks.jsonl": "",
         "internal/runs.jsonl": "",
-        "internal/agent_registry.md": "# Agent / Worker Registry\n\n| id | role | carrier | preset | status | task(s) | output | notes |\n|---|---|---|---|---|---|---|---|\n| supervisor | decomposes, routes, validates, reports | current | default | active | all | [output/00_index.md](../output/00_index.md) | owns queue and final decisions |\n",
-        "internal/validation_report.md": "# Validation Report\n\n```text\nverdict: pending\n```\n",
-        "internal/handoff.md": "# Internal LLL Handoff\n\n```text\nstatus: pending\n```\n\n## Main human outputs\n- [output/00_index.md](../output/00_index.md): reading order and links\n",
-        "output/00_index.md": "# Output Index\n\nHuman reading order:\n\n1. [00_index.md](00_index.md) — this index; every file in `output/` should be listed here.\n2. [90_error_report.md](90_error_report.md) — append-only workflow/runtime errors, corrections, and self-maintenance notes.\n3. [91_traceability.md](91_traceability.md) — append-only mapping from claims/changes to evidence.\n4. [99_next_steps.md](99_next_steps.md) — current recommended next actions.\n\nAdd primary deliverables such as `01_summary.md` or `01_final_report.md` as they are created. On reuse, update the primary deliverable for same-scope corrections; create `02_*`, `03_*`, etc. for independent new deliverables.\n\nInternal/process files live under [../internal/](../internal/) and are intentionally not the main reading surface.\n",
-        "output/90_error_report.md": f"# Error Report\n\n```text\nappend_only: true\ncreated_at: {now()}\nentry_rule: record workflow/runtime abnormalities and repairs, not user goals or normal scope additions; every appended entry includes a local-timezone ISO-8601/RFC3339 timestamp\n```\n\nNo meaningful workflow/runtime errors, corrections, or self-maintenance lessons have been recorded yet. Append timestamped entries below if they occur.\n",
-        "output/91_traceability.md": f"# Traceability\n\n```text\nappend_only: true\ncreated_at: {now()}\nentry_rule: every appended entry includes a local-timezone ISO-8601/RFC3339 timestamp\n```\n\nNo claim/source/change trace entries have been recorded yet. Append entries below as outputs and decisions are produced.\n",
-        "output/99_next_steps.md": f"# Next Steps\n\n```text\ncurrent_state: active\nupdated_at: {now()}\n```\n\n## Recommended next actions\n\n1. Define or run the next LLL task.\n",
+        "internal/agent-registry.md": "# Agent / Worker Registry\n\n| id | role | carrier | preset | status | task(s) | output | notes |\n|---|---|---|---|---|---|---|---|\n| supervisor | decomposes, routes, validates, reports | current | default | active | all | [output/00-index.md](../output/00-index.md) | owns queue and final decisions |\n",
+        "internal/validation-report.md": "# Validation Report\n\n```text\nverdict: pending\n```\n",
+        "internal/handoff.md": "# Internal LLL Handoff\n\n```text\nstatus: pending\n```\n\n## Main human outputs\n- [output/00-index.md](../output/00-index.md): reading order and links\n",
+        "output/00-index.md": "# Output Index\n\nHuman reading order:\n\n1. [00-index.md](00-index.md) — this index; every file in `output/` should be listed here.\n2. [90-error-report.md](90-error-report.md) — append-only workflow/runtime errors, corrections, and self-maintenance notes.\n3. [91-traceability.md](91-traceability.md) — append-only mapping from claims/changes to evidence.\n4. [99-next-steps.md](99-next-steps.md) — current recommended next actions.\n\nAdd primary deliverables such as `01-summary.md` or `01-final-report.md` as they are created. On reuse, update the primary deliverable for same-scope corrections; create `02-*`, `03-*`, etc. for independent new deliverables.\n\nInternal/process files live under [../internal/](../internal/) and are intentionally not the main reading surface.\n",
+        "output/90-error-report.md": f"# Error Report\n\n```text\nappend_only: true\ncreated_at: {now()}\nentry_rule: record workflow/runtime abnormalities and repairs, not user goals or normal scope additions; every appended entry includes a local-timezone ISO-8601/RFC3339 timestamp\n```\n\nNo meaningful workflow/runtime errors, corrections, or self-maintenance lessons have been recorded yet. Append timestamped entries below if they occur.\n",
+        "output/91-traceability.md": f"# Traceability\n\n```text\nappend_only: true\ncreated_at: {now()}\nentry_rule: every appended entry includes a local-timezone ISO-8601/RFC3339 timestamp\n```\n\nNo claim/source/change trace entries have been recorded yet. Append entries below as outputs and decisions are produced.\n",
+        "output/99-next-steps.md": f"# Next Steps\n\n```text\ncurrent_state: active\nupdated_at: {now()}\n```\n\n## Recommended next actions\n\n1. Define or run the next LLL task.\n",
         "internal/logs/supervisor.log": f"{now()} initialized LLL workdir {wd}\n",
         "internal/logs/runner.log": "",
     }
@@ -312,13 +354,13 @@ next_supervisor_action: add or run tasks
 ## Resume steps
 1. Read [mission.md](../mission.md).
 2. Validate [internal/tasks.jsonl](tasks.jsonl) and [internal/runs.jsonl](runs.jsonl).
-3. Read [internal/agent_registry.md](agent_registry.md) and relevant worker handoffs.
-4. Read [output/00_index.md](../output/00_index.md) for human-facing outputs.
+3. Read [internal/agent-registry.md](agent-registry.md) and relevant worker handoffs.
+4. Read [output/00-index.md](../output/00-index.md) for human-facing outputs.
 5. Continue from last_safe_checkpoint.
 """
-    write_if_missing_or_force(wd / "internal/recovery_state.md", checkpoint_text, force=args.force)
+    write_if_missing_or_force(wd / "internal/recovery-state.md", checkpoint_text, force=args.force)
     event_name = "workdir_reinitialized" if args.force else "workdir_created"
-    event(wd, task_id=None, event_name=event_name, status="ok", message="LLL workdir initialized", artifacts=["mission.md", rel_to_workdir(wd, tasks_path(wd)), "output/00_index.md", "output/90_error_report.md", "output/91_traceability.md", "output/99_next_steps.md"])
+    event(wd, task_id=None, event_name=event_name, status="ok", message="LLL workdir initialized", artifacts=["mission.md", rel_to_workdir(wd, tasks_path(wd)), "output/00-index.md", "output/90-error-report.md", "output/91-traceability.md", "output/99-next-steps.md"])
     print(wd)
 
 
@@ -354,17 +396,23 @@ def cmd_add_task(args: argparse.Namespace) -> None:
     task_dir = wd / out
     (task_dir / "artifacts").mkdir(parents=True, exist_ok=True)
     kind = layout_kind(wd)
+
+    def link_to(path: Path, label: str | None = None) -> str:
+        rel = os.path.relpath(path, start=task_dir).replace(os.sep, "/")
+        return f"[{label or rel}]({rel})"
+
+    shared_files = ", ".join([
+        link_to(tasks_path(wd), rel_to_workdir(wd, tasks_path(wd))),
+        link_to(runs_path(wd), rel_to_workdir(wd, runs_path(wd))),
+        link_to(registry_path(wd), rel_to_workdir(wd, registry_path(wd))),
+        link_to(recovery_path(wd), rel_to_workdir(wd, recovery_path(wd))),
+    ])
+    mission_link = link_to(wd / "mission.md", "mission.md")
     if kind == LAYOUT_V2:
-        shared_files = "[internal/tasks.jsonl](../../tasks.jsonl), [internal/runs.jsonl](../../runs.jsonl), [internal/agent_registry.md](../../agent_registry.md), [internal/recovery_state.md](../../recovery_state.md)"
-        mission_link = "[mission.md](../../../mission.md)"
         output_link = "[output/](../../../output/)"
     elif kind == LAYOUT_V1:
-        shared_files = "[collab/tasks.jsonl](../../tasks.jsonl), [collab/runs.jsonl](../../runs.jsonl), [collab/agent_registry.md](../../agent_registry.md), [recovery_state.md](../../../recovery_state.md)"
-        mission_link = "[mission.md](../../../mission.md)"
         output_link = "[readable/](../../../readable/)"
     else:
-        shared_files = "[tasks.jsonl](../../tasks.jsonl), [runs.jsonl](../../runs.jsonl), [agent_registry.md](../../agent_registry.md), [recovery_state.md](../../recovery_state.md)"
-        mission_link = "[mission.md](../../mission.md)"
         output_link = "[deliverables/](../../deliverables/) or a supervisor-assigned human-facing path"
     input_lines = []
     for item in task["inputs"]:
@@ -372,7 +420,7 @@ def cmd_add_task(args: argparse.Namespace) -> None:
             input_lines.append(f"- {mission_link}\n")
         else:
             input_lines.append(f"- {item}\n")
-    atomic_write(task_dir / "task.md", f"# LLL Worker Task\n\n```text\ntask_id: {args.id}\ncarrier: {args.carrier}\npreset: {args.preset}\nstatus: pending\n```\n\n## Objective\n{args.goal}\n\n## Inputs\n" + "".join(input_lines) + "\n## Required outputs\n- [handoff.md](handoff.md)\n- [artifacts/](artifacts/) as needed\n\n## Compact LLL contract\n- Read " + mission_link + ", this task file, and listed inputs before starting.\n- Treat the workdir as the source of truth; chat is only a short handoff.\n- Write detailed work, logs, evidence, drafts, and outputs under this task directory unless explicitly assigned a shared human-facing deliverable under " + output_link + ".\n- Write an artifact skeleton early, then fill it incrementally for long reading/research tasks.\n- Do not edit shared state files (" + shared_files + ") unless explicitly granted ownership through a lock or runner API.\n- Keep claims traceable to artifact paths, sources, commands, or validation notes; use Markdown links for stable references.\n- If writing human-facing outputs, use numbered filenames under " + output_link + " and make sure 00_index.md is updated by the owner/supervisor.\n- If blocked, record what was tried and propose the smallest fallback.\n\n## Logging\nAppend commands, sources, decisions, failures, and retries to [log.txt](log.txt).\n\n## Handoff contract\nstatus, outputs, 1-3 key results, risks/blockers, recommended next step\n")
+    atomic_write(task_dir / "task.md", f"# LLL Worker Task\n\n```text\ntask_id: {args.id}\ncarrier: {args.carrier}\npreset: {args.preset}\nstatus: pending\n```\n\n## Objective\n{args.goal}\n\n## Inputs\n" + "".join(input_lines) + "\n## Required outputs\n- [handoff.md](handoff.md)\n- [artifacts/](artifacts/) as needed\n\n## Compact LLL contract\n- Read " + mission_link + ", this task file, and listed inputs before starting.\n- Treat the workdir as the source of truth; chat is only a short handoff.\n- Write detailed work, logs, evidence, drafts, and outputs under this task directory unless explicitly assigned a shared human-facing deliverable under " + output_link + ".\n- Write an artifact skeleton early, then fill it incrementally for long reading/research tasks.\n- Do not edit shared state files (" + shared_files + ") unless explicitly granted ownership through a lock or runner API.\n- Keep claims traceable to artifact paths, sources, commands, or validation notes; use Markdown links for stable references.\n- If writing human-facing outputs, use numbered filenames under " + output_link + " and make sure 00-index.md is updated by the owner/supervisor.\n- If blocked, record what was tried and propose the smallest fallback.\n\n## Logging\nAppend commands, sources, decisions, failures, and retries to [log.txt](log.txt).\n\n## Handoff contract\nstatus, outputs, 1-3 key results, risks/blockers, recommended next step\n")
     atomic_write(task_dir / "status.json", json.dumps({"task_id": args.id, "status": "pending", "current_step": "not started", "attempts": 0, "last_checkpoint": None, "last_error": None, "outputs": [], "updated_at": now()}, ensure_ascii=False, indent=2) + "\n")
     atomic_write(task_dir / "log.txt", f"{now()} task queued\n")
     atomic_write(task_dir / "handoff.md", f"# Worker Handoff\n\n```text\nstatus: pending\ntask_id: {args.id}\n```\n")
@@ -441,7 +489,7 @@ def cmd_checkpoint(args: argparse.Namespace) -> None:
     task_rel = rel_to_workdir(wd, tasks_path(wd))
     runs_rel = rel_to_workdir(wd, runs_path(wd))
     registry_rel = rel_to_workdir(wd, registry_path(wd))
-    output_index = output_dir(wd) / "00_index.md"
+    output_index = existing_or_canonical(output_dir(wd), OUTPUT_INDEX)
     output_rel = rel_to_workdir(wd, output_index) if output_index.exists() else rel_to_workdir(wd, output_dir(wd))
     text = f"""# Recovery State
 
@@ -476,7 +524,7 @@ def validate_output_index(wd: Path) -> bool:
             print(f"missing: {rel_to_workdir(wd, outdir)}")
             return False
         return True
-    index = outdir / "00_index.md"
+    index = existing_or_canonical(outdir, OUTPUT_INDEX)
     if not index.exists():
         if kind == LAYOUT_V2 or any(outdir.iterdir()):
             print(f"missing: {rel_to_workdir(wd, index)}")
@@ -485,16 +533,16 @@ def validate_output_index(wd: Path) -> bool:
     text = index.read_text(encoding="utf-8", errors="replace")
     ok = True
     for path in sorted(p for p in outdir.iterdir() if p.is_file()):
-        if path.name not in text:
+        if not any(name in text for name in equivalent_names(path.name)):
             ok = False
             print(f"output index does not mention {rel_to_workdir(wd, path)}")
     if kind == LAYOUT_V2:
-        for name in ["90_error_report.md", "91_traceability.md", "99_next_steps.md"]:
-            p = outdir / name
+        for name in [ERROR_REPORT, TRACEABILITY, NEXT_STEPS]:
+            p = existing_or_canonical(outdir, name)
             if not p.exists():
                 ok = False
                 print(f"missing: {rel_to_workdir(wd, p)}")
-            elif name not in text:
+            elif not any(name in text for name in equivalent_names(p.name)):
                 ok = False
                 print(f"output index does not mention {rel_to_workdir(wd, p)}")
     return ok
@@ -583,11 +631,16 @@ def cmd_validate(args: argparse.Namespace) -> None:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description="LLL file-protocol helper",
-        epilog=f"Recommended new workdir pattern: {RECOMMENDED_WORKDIR_PATTERN} (underscore between date and time; do not use YYYYMMDD-HHMMSS).",
+        epilog=f"Recommended new workdir pattern: {RECOMMENDED_WORKDIR_PATTERN} (hyphen inside timestamp, underscore before the kebab-case short description; do not use YYYYMMDD_HHMMSS_slug for new workdirs).",
     )
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("init", help="create a LLL v2 workdir: mission.md + internal/ + output/; recommended path: YYYYMMDD_HHMMSS_slug")
+    s = sub.add_parser(
+        "init",
+        help="create a LLL v2 workdir: mission.md + internal/ + output/; recommended path: YYYYMMDD-HHMMSS_short-description-in-kebab-case",
+        description="Create a LLL v2 workdir: mission.md + internal/ + output/.",
+        epilog=f"Recommended new workdir pattern: {RECOMMENDED_WORKDIR_PATTERN}",
+    )
     s.add_argument("workdir")
     s.add_argument("--objective", default="")
     s.add_argument("--force", action="store_true", help="reinitialize an existing workdir after backing up overwritten core files where possible")
@@ -632,7 +685,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--actor", default="supervisor")
     s.set_defaults(func=cmd_event)
 
-    s = sub.add_parser("checkpoint", help="rewrite the layout-specific recovery_state.md")
+    s = sub.add_parser("checkpoint", help="rewrite the layout-specific recovery-state.md")
     s.add_argument("workdir")
     s.add_argument("--status", default="active")
     s.add_argument("--phase", default="working")

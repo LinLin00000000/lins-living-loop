@@ -31,7 +31,7 @@ Skip full LLL for simple Q&A, tiny edits, or tasks that fit safely in a few tool
 New runs default to:
 
 ```text
-~/lll-work/YYYYMMDD_HHMMSS_slug/
+~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case/
 ```
 
 Canonical layout:
@@ -42,10 +42,10 @@ Canonical layout:
   internal/
     tasks.jsonl
     runs.jsonl
-    agent_registry.md
-    recovery_state.md
+    agent-registry.md
+    recovery-state.md
     handoff.md
-    validation_report.md
+    validation-report.md
     inputs/
     logs/
     agents/<task-id>/
@@ -55,11 +55,11 @@ Canonical layout:
       handoff.md
       artifacts/
   output/
-    00_index.md
-    01_<deliverable>.md
-    90_error_report.md
-    91_traceability.md
-    99_next_steps.md
+    00-index.md
+    01-<deliverable>.md
+    90-error-report.md
+    91-traceability.md
+    99-next-steps.md
 ```
 
 The paths stay boring on purpose. `mission.md`, `internal/`, and `output/` are easier for agents, scripts, and humans to understand than a fully metaphorical taxonomy. The Living layer belongs in the narrative, headings, lifecycle, and discipline, not in fragile machine interfaces.
@@ -75,11 +75,11 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 | Seed | Write or update `mission.md` |
 | Split | Decompose `internal/tasks.jsonl` and worker `task.md` |
 | Work | Workers write logs, evidence, drafts, and artifacts |
-| Trace | Track claims and evidence in `output/91_traceability.md` |
-| Heal | Record errors, repairs, and self-maintenance in `output/90_error_report.md` |
-| Validate | Write `internal/validation_report.md` |
-| Hand off | Refresh `internal/handoff.md` and `internal/recovery_state.md` |
-| Grow or Close | Update `output/99_next_steps.md` and decide whether to continue or close |
+| Trace | Track claims and evidence in `output/91-traceability.md` |
+| Heal | Record errors, repairs, and self-maintenance in `output/90-error-report.md` |
+| Validate | Write `internal/validation-report.md` |
+| Hand off | Refresh `internal/handoff.md` and `internal/recovery-state.md` |
+| Grow or Close | Update `output/99-next-steps.md` and decide whether to continue or close |
 
 ## Name and slug
 

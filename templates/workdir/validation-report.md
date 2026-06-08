@@ -9,9 +9,9 @@ validator: <agent/tool>
 ## Structure check
 | criterion | status | evidence |
 |---|---|---|
-| required v2 files exist | pending | [mission](../mission.md), [internal queue](tasks.jsonl), [output index](../output/00_index.md) |
-| output files are indexed | pending | [output/00_index.md](../output/00_index.md) |
-| required audit files exist | pending | [90_error_report](../output/90_error_report.md), [91_traceability](../output/91_traceability.md), [99_next_steps](../output/99_next_steps.md) |
+| required v2 files exist | pending | [mission](../mission.md), [internal queue](tasks.jsonl), [output index](../output/00-index.md) |
+| output files are indexed | pending | [output/00-index.md](../output/00-index.md) |
+| required audit files exist | pending | [90-error-report](../output/90-error-report.md), [91-traceability](../output/91-traceability.md), [99-next-steps](../output/99-next-steps.md) |
 
 ## Mission criteria check
 | criterion | status | evidence |

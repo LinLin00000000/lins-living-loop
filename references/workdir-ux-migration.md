@@ -6,7 +6,7 @@ Use this reference when changing LLL's own workdir layout, templates, helper scr
 
 A LLL workdir should be easy for two readers at once:
 
-- Humans start from `output/00_index.md` and numbered `output/` files.
+- Humans start from `output/00-index.md` and numbered `output/` files.
 - Agents, runners, and supervisors use `internal/` for queues, logs, registry, recovery, validation, task state, raw inputs, and worker artifacts.
 - Root stays shallow: normally only `mission.md`, `internal/`, and `output/`.
 
@@ -33,20 +33,20 @@ Verify that generated and templated Markdown uses stable links:
 - Relative links for files generated inside the same LLL workdir.
 - URLs or absolute paths for stable external resources.
 - Plain text for temporary external/user-mentioned files likely to move.
-- Numbered `output/NN_*.md` files for human-facing outputs.
-- `output/00_index.md` mentions every file in `output/`.
-- `output/90_error_report.md` and `output/91_traceability.md` are append-only audit files.
-- `output/99_next_steps.md` is mutable and reflects the current next action.
+- Numbered `output/NN-*.md` files for human-facing outputs.
+- `output/00-index.md` mentions every file in `output/`.
+- `output/90-error-report.md` and `output/91-traceability.md` are append-only audit files.
+- `output/99-next-steps.md` is mutable and reflects the current next action.
 - Worker task files should link to `mission.md`, `handoff.md`, `artifacts/`, `log.txt`, shared state, and assigned human-facing output areas where paths are stable.
 
 ## Reuse output file policy
 
 Use the mixed strategy for human deliverables:
 
-- Update the current `01_*` primary deliverable for same-scope corrections or small supplements.
-- Create the next numbered output file (`02_*.md`, `03_*.md`, etc.) for independent follow-up analysis, design decision, new task result, or phase conclusion.
-- Keep `00_index.md` current and make it obvious which file is the current recommended reading entry.
-- Keep `90_error_report.md` for workflow/runtime errors only; user requirements and decisions belong in mission addenda, traceability, or numbered deliverables.
+- Update the current `01-*` primary deliverable for same-scope corrections or small supplements.
+- Create the next numbered output file (`02-*.md`, `03-*.md`, etc.) for independent follow-up analysis, design decision, new task result, or phase conclusion.
+- Keep `00-index.md` current and make it obvious which file is the current recommended reading entry.
+- Keep `90-error-report.md` for workflow/runtime errors only; user requirements and decisions belong in mission addenda, traceability, or numbered deliverables.
 
 ## Legacy compatibility rule
 
@@ -54,7 +54,7 @@ Keep old workdirs resumable.
 
 - Canonical v2: `mission.md`, `internal/`, `output/`.
 - Transitional v1: `mission.md`, `collab/`, `readable/`, plus root recovery/handoff/validation files.
-- Legacy v0: root-level `tasks.jsonl`, `runs.jsonl`, `agent_registry.md`, `agents/`, or `deliverables/`.
+- Legacy v0: root-level `tasks.jsonl`, `runs.jsonl`, `agent-registry.md`, `agents/`, or `deliverables/`.
 
 Helpers should continue to read/write the detected old layout unless the user explicitly asks to migrate. New workdirs should not silently create an old layout just because legacy support exists.
 

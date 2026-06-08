@@ -13,7 +13,7 @@ If the assigned task is independent validation, do not silently become the super
 - task-local `status.json`
 - `log.txt`
 
-But it should not edit shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent_registry.md`, `internal/recovery_state.md`) unless the task explicitly grants runner/supervisor ownership. If shared-state drift is found, record it as a note and recommend supervisor reconciliation.
+But it should not edit shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md`) unless the task explicitly grants runner/supervisor ownership. If shared-state drift is found, record it as a note and recommend supervisor reconciliation.
 
 For transitional workdirs, use equivalent `collab/` paths. For legacy workdirs, use equivalent root queue/registry and `agents/<task-id>/` paths.
 
@@ -24,13 +24,13 @@ For transitional workdirs, use equivalent `collab/` paths. For legacy workdirs, 
 3. Independently verify important environment/tool claims with safe commands, avoiding secret file contents.
 4. Check final deliverables for obvious secret leakage when the task involved config/auth/environment inspection. Prefer pattern scans over printing sensitive matches.
 5. Validate mission criteria section by section, and separate PASS reasons from notes.
-6. Check that `output/00_index.md` mentions every file in `output/`, required audit files exist, and `output/99_next_steps.md` reflects the current state.
+6. Check that `output/00-index.md` mentions every file in `output/`, required audit files exist, and `output/99-next-steps.md` reflects the current state.
 7. State the independence limit honestly: same-runtime second pass, separate worker/runtime, cross-model review, or human review.
 8. Use `PASS_WITH_NOTES` rather than `PASS` when deliverables satisfy the mission but there is non-blocking shared-state drift, weaker-than-ideal independence, or evidence organization limitations.
 
 ## Common PASS_WITH_NOTES causes
 
-- `internal/agent_registry.md` or queue status lags behind worker handoffs/status, but the mission deliverable is sound.
+- `internal/agent-registry.md` or queue status lags behind worker handoffs/status, but the mission deliverable is sound.
 - `dop.py validate` passes but is known to be baseline only.
 - The validator is a separate pass in the same runtime rather than a different runtime/model.
 - Some intermediate artifacts are thin, but final claims are independently rechecked.

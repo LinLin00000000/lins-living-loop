@@ -54,11 +54,11 @@ Mapping:
 | Seed | Write or update `mission.md` |
 | Split | Decompose `internal/tasks.jsonl` and worker `task.md` |
 | Work | Workers write artifacts and logs |
-| Trace | Keep claims/evidence in `output/91_traceability.md` |
-| Heal | Record workflow wounds and repairs in `output/90_error_report.md` |
-| Validate | Write `internal/validation_report.md` |
-| Hand off | Refresh `internal/handoff.md` and `internal/recovery_state.md` |
-| Grow or Close | Update `output/99_next_steps.md` and choose continuation/completion |
+| Trace | Keep claims/evidence in `output/91-traceability.md` |
+| Heal | Record workflow wounds and repairs in `output/90-error-report.md` |
+| Validate | Write `internal/validation-report.md` |
+| Hand off | Refresh `internal/handoff.md` and `internal/recovery-state.md` |
+| Grow or Close | Update `output/99-next-steps.md` and choose continuation/completion |
 
 ## Default new workdir; reuse only with a clear signal
 
@@ -79,7 +79,7 @@ When the user gives a cross-conversation reuse signal but no path, do not start 
 
 If the user merely asks a similar question later, says something like “此前已经运行过一次” without asking to continue it, or provides an old workdir path as reference material, do not automatically search for or reuse old workdirs. Create a fresh workdir unless the user gives a clear continuation instruction. If reuse would materially help but the signal is ambiguous, ask one short question or proceed with a fresh workdir and label the assumption.
 
-When reuse is chosen, reuse is not blind appending. First read `mission.md`, the layout-specific recovery file (`internal/recovery_state.md`, transitional root `recovery_state.md`, or legacy root equivalent), the layout-specific queue/registry (`internal/tasks.jsonl` and `internal/agent_registry.md`, transitional `collab/...`, or legacy root files), relevant `output/` deliverables (or transitional `readable/`, legacy `deliverables/`), and relevant worker `handoff.md` files. Then classify the new request as one of:
+When reuse is chosen, reuse is not blind appending. First read `mission.md`, the layout-specific recovery file (`internal/recovery-state.md`, transitional root `recovery-state.md`, or legacy root equivalent), the layout-specific queue/registry (`internal/tasks.jsonl` and `internal/agent-registry.md`, transitional `collab/...`, or legacy root files), relevant `output/` deliverables (or transitional `readable/`, legacy `deliverables/`), and relevant worker `handoff.md` files. Then classify the new request as one of:
 - extension: same mission, additional scope;
 - correction: prior output or assumption needs repair;
 - workflow addendum: the user interrupts or follows up to clarify tool policy, install policy, output expectations, style, or execution preferences for the active task; absorb the preference/correction, patch memory/skills if durable, then resume the original task from the existing workdir;
@@ -87,11 +87,11 @@ When reuse is chosen, reuse is not blind appending. First read `mission.md`, the
 - validation follow-up: fix a FAIL/PASS_WITH_NOTES issue;
 - mission change: objective changed enough to risk mixing unrelated evidence.
 
-For reuse, add a mission addendum, append traceable tasks/events, and integrate new deliverables with old context. Dynamically maintain `output/00_index.md` and all `output/9x_*.md` audit files: error reports and traceability are append-only; `output/99_next_steps.md` should be updated to the current state because the previous suggested action may already have been completed. Create a new workdir when the mission changed, old evidence would contaminate the new task, the old workdir is inaccessible/corrupt, the reuse signal is weak, or the user explicitly asks for a new run.
+For reuse, add a mission addendum, append traceable tasks/events, and integrate new deliverables with old context. Dynamically maintain `output/00-index.md` and all `output/9x-*.md` audit files: error reports and traceability are append-only; `output/99-next-steps.md` should be updated to the current state because the previous suggested action may already have been completed. Create a new workdir when the mission changed, old evidence would contaminate the new task, the old workdir is inaccessible/corrupt, the reuse signal is weak, or the user explicitly asks for a new run.
 
 ## Minimal workdir
 
-Use a self-contained directory. If no project directory is specified, default to `~/lll-work/YYYYMMDD_HHMMSS_slug/`. Use `_` between date and time and another `_` before the slug; do not use a hyphen inside the timestamp such as `YYYYMMDD-HHMMSS`, because mixed timestamp separators make directory listings harder to sort and scan. Slugs may still use ASCII hyphens between words when useful. Do not place new LLL runs under legacy PWF storage such as `~/hermes-pwf-record/` unless the user explicitly requests PWF or asks to resume an existing PWF workspace.
+Use a self-contained directory. If no project directory is specified, default to `~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case/`. Use `-` between date and time, then `_` between the timestamp and short description: `YYYYMMDD-HHMMSS_short-description-in-kebab-case`. The timestamp is one field, the underscore separates it from the semantic slug, and slug words use ASCII hyphens. Avoid `YYYYMMDD_HHMMSS_slug` for new workdirs because the extra underscore makes the name look like three fields instead of timestamp + description. Do not place new LLL runs under legacy PWF storage such as `~/hermes-pwf-record/` unless the user explicitly requests PWF or asks to resume an existing PWF workspace.
 
 Canonical v2 layout for new workdirs:
 
@@ -101,10 +101,10 @@ Canonical v2 layout for new workdirs:
   internal/                      # agent/runner collaboration state; humans usually do not start here
     tasks.jsonl                  # current durable queue
     runs.jsonl                   # append-only event log
-    agent_registry.md            # worker/status/output map
-    recovery_state.md            # compact resume instructions
+    agent-registry.md            # worker/status/output map
+    recovery-state.md            # compact resume instructions
     handoff.md                   # compact internal handoff for future supervisors
-    validation_report.md         # independent validation verdict and evidence
+    validation-report.md         # independent validation verdict and evidence
     inputs/                      # raw/reference materials introduced during the run
     logs/supervisor.log
     logs/runner.log
@@ -115,29 +115,29 @@ Canonical v2 layout for new workdirs:
       handoff.md                 # short worker handoff
       artifacts/                 # detailed evidence, raw data, reports, diffs
   output/                        # human-facing outputs; start here when reading results
-    00_index.md                  # required table of contents; indexes every output file
-    01_<deliverable>.md          # primary numbered deliverables for stable sorting
-    02_<deliverable>.md
-    90_error_report.md           # required append-only errors/corrections/self-maintenance log
-    91_traceability.md           # required append-only claim/source/change trace map
-    99_next_steps.md             # required mutable current next actions
+    00-index.md                  # required table of contents; indexes every output file
+    01-<deliverable>.md          # primary numbered deliverables for stable sorting
+    02-<deliverable>.md
+    90-error-report.md           # required append-only errors/corrections/self-maintenance log
+    91-traceability.md           # required append-only claim/source/change trace map
+    99-next-steps.md             # required mutable current next actions
 ```
 
 Keep the root shallow. For new workdirs, root should generally contain only `mission.md`, `internal/`, and `output/`. Put raw repositories, source dumps, scraped pages, long logs, validation, recovery state, final/internal handoffs, and other process files under `internal/`. Put only human-facing deliverables under `output/`.
 
 Existing layouts remain valid for resume:
-- Transitional v1: `collab/` for process state, `readable/` for human outputs, with root `recovery_state.md`, `handoff.md`, and `validation_report.md`.
-- Legacy v0: root-level `tasks.jsonl`, `runs.jsonl`, `agent_registry.md`, `logs/`, `agents/`, and `deliverables/`.
+- Transitional v1: `collab/` for process state, `readable/` for human outputs, with root `recovery-state.md`, `handoff.md`, and `validation-report.md`.
+- Legacy v0: root-level `tasks.jsonl`, `runs.jsonl`, `agent-registry.md`, `logs/`, `agents/`, and `deliverables/`.
 
 Do not migrate old workdirs unless the user asks or migration itself is the task. New helper/template output should use v2.
 
 Number human-facing outputs in `output/` with two-digit prefixes so file listings preserve reading order:
-- `00_index.md`: must index every file in `output/`, including audit and next-step files.
+- `00-index.md`: must index every file in `output/`, including audit and next-step files.
 - `01`-`89`: primary reports, summaries, decisions, source notes, designs, or user-facing artifacts.
-- `90_error_report.md`: append-only error/correction/self-iteration report. Create it by default; if no errors occurred, say so explicitly.
-- `91_traceability.md`: append-only mapping from claims/changes to evidence, commands, files, validation notes, or assumptions.
+- `90-error-report.md`: append-only error/correction/self-iteration report. Create it by default; if no errors occurred, say so explicitly.
+- `91-traceability.md`: append-only mapping from claims/changes to evidence, commands, files, validation notes, or assumptions.
 - `92`-`98`: optional audit/debug/review files.
-- `99_next_steps.md`: mutable current recommendations for what the user can do next.
+- `99-next-steps.md`: mutable current recommendations for what the user can do next.
 
 Human-facing `output/` prose should default to the user's explicitly requested output language; if none is specified, use the current interaction language. Treat this as a hidden product default, not a status banner: do not add `language_rule`, `interaction_language`, or `output_language` markers to `mission.md` or `output/` files merely to announce the language. Record language only when it is a real task constraint, such as user-requested non-default language, bilingual deliverables, translation work, or cross-language handoff risk. Keep filenames, JSON keys, commands, API names, code identifiers, external proper nouns, and stable template markers in English when that improves portability; write the explanatory body of reports, indexes, error reports, traceability notes, and next-step files in the chosen human language unless the user asks otherwise.
 
@@ -145,10 +145,10 @@ Append-only files need timestamped entries. Keep `created_at` and, for every app
 
 Link aggressively but only when links will stay useful:
 - Use Markdown link syntax: `[label](target)`.
-- Link process-generated files inside the LLL workdir with relative paths from the current file, for example `[worker handoff](../internal/agents/T001/handoff.md)` or `[traceability](91_traceability.md)`.
+- Link process-generated files inside the LLL workdir with relative paths from the current file, for example `[worker handoff](../internal/agents/T001/handoff.md)` or `[traceability](91-traceability.md)`.
 - Link stable external resources with absolute paths or URLs, for example `[source](https://example.com/report)` or `[local dataset](/abs/path/data.csv)`.
 - Do not hyperlink external temporary/user-mentioned files if their location may move; mention them as plain text with enough identifying context instead.
-- Prefer `output/91_traceability.md` for audit-grade traceability. If sources themselves are a primary user deliverable, create a normal `02_sources.md` as well and still keep claim-level traceability in `91_traceability.md`.
+- Prefer `output/91-traceability.md` for audit-grade traceability. If sources themselves are a primary user deliverable, create a normal `02-sources.md` as well and still keep claim-level traceability in `91-traceability.md`.
 
 
 ## Project and source-of-truth hygiene
@@ -166,16 +166,16 @@ When LLL is used to create, publish, or maintain a reusable skill, GitHub repo, 
 On a reused workspace, especially after the user points out mistakes or asks for corrections, the conversation is not the archive. The workspace is. The goal is human-recoverable state, not creating a new file for every chat turn.
 
 - Keep the current human-facing state recoverable from `output/`: update the relevant numbered deliverable, audit file, index, or next-step file so the latest conclusion is not trapped in chat.
-- Do not mechanically create a new numbered deliverable for every reuse/correction. Use the human deliverable lifecycle below: small corrections update the existing primary deliverable plus traceability as needed; a new `02_*`, `03_*`, etc. is only for an independently readable analysis, decision, evidence packet, task result, or phase conclusion.
-- Update `output/00_index.md` whenever the recommended reading entry, current conclusion, or output file list changes.
-- Append to `output/90_error_report.md` for workflow mistakes, wrong assumptions, failed commands, missing records, or repairs.
-- Append to `output/91_traceability.md` with evidence for claims, file moves, commits, validation commands, and install checks.
-- Update `output/99_next_steps.md` to the current next actions; do not leave stale previous recommendations as the latest state.
+- Do not mechanically create a new numbered deliverable for every reuse/correction. Use the human deliverable lifecycle below: small corrections update the existing primary deliverable plus traceability as needed; a new `02-*`, `03-*`, etc. is only for an independently readable analysis, decision, evidence packet, task result, or phase conclusion.
+- Update `output/00-index.md` whenever the recommended reading entry, current conclusion, or output file list changes.
+- Append to `output/90-error-report.md` for workflow mistakes, wrong assumptions, failed commands, missing records, or repairs.
+- Append to `output/91-traceability.md` with evidence for claims, file moves, commits, validation commands, and install checks.
+- Update `output/99-next-steps.md` to the current next actions; do not leave stale previous recommendations as the latest state.
 - The final chat response should summarize and link paths; it should not be the only place where the result exists.
 
 ## Worker record completeness
 
-A task marked `done` in `internal/tasks.jsonl` or `internal/agent_registry.md` must have a non-empty `internal/agents/<task-id>/` record. At minimum include:
+A task marked `done` in `internal/tasks.jsonl` or `internal/agent-registry.md` must have a non-empty `internal/agents/<task-id>/` record. At minimum include:
 
 ```text
 internal/agents/<task-id>/
@@ -185,17 +185,17 @@ internal/agents/<task-id>/
   status.json
 ```
 
-This applies even when the “worker” was the supervisor doing the work inline rather than a spawned subagent. Empty done directories are a workflow error: repair them before final delivery, and record the repair in `output/90_error_report.md`.
+This applies even when the “worker” was the supervisor doing the work inline rather than a spawned subagent. Empty done directories are a workflow error: repair them before final delivery, and record the repair in `output/90-error-report.md`.
 
 ## Human deliverable lifecycle on reuse
 
 Use a mixed strategy instead of always appending to one final report or always creating a new file:
 
-- Keep `output/01_final_report.md` (or the mission's `01_*` primary deliverable) as the current main conclusion for the same mission/stage.
+- Keep `output/01-final-report.md` (or the mission's `01-*` primary deliverable) as the current main conclusion for the same mission/stage.
 - Update that primary deliverable when the reuse request is a correction, clarification, style cleanup, small supplement, or rewrite of the same deliverable.
-- Create the next numbered deliverable (`02_*.md`, `03_*.md`, etc.) when the reuse request produces an independently readable analysis, design decision, new task result, new evidence packet, or new phase conclusion.
-- Keep `output/00_index.md` responsible for navigation: mark the current recommended reading entry and distinguish "current conclusion" from historical or supplementary deliverables.
-- Do not turn `01_final_report.md` into a chronological transcript. Put audit history in `output/91_traceability.md`; put workflow errors in `output/90_error_report.md`; put current actions in `output/99_next_steps.md`.
+- Create the next numbered deliverable (`02-*.md`, `03-*.md`, etc.) when the reuse request produces an independently readable analysis, design decision, new task result, new evidence packet, or new phase conclusion.
+- Keep `output/00-index.md` responsible for navigation: mark the current recommended reading entry and distinguish "current conclusion" from historical or supplementary deliverables.
+- Do not turn `01-final-report.md` into a chronological transcript. Put audit history in `output/91-traceability.md`; put workflow errors in `output/90-error-report.md`; put current actions in `output/99-next-steps.md`.
 
 Use ASCII-safe directory names. Worker-facing prose and intermediate artifacts should default to the user's language / current interaction language. Use English when it materially improves correctness or portability: code identifiers, JSON keys, file names, CLI commands, API names, external proper nouns, quoted source concepts, or user-specified English output.
 
@@ -215,7 +215,7 @@ After final validation and delivery, mark `status` as `completed`.
 
 Do not add mandatory language metadata fields to `mission.md`. If language is explicitly part of the task, record it as an ordinary constraint or expected-output note rather than as a repeated product label.
 
-Keep the main sections (`Objective`, `Success criteria`, `Constraints`, `Inputs`, `Expected outputs`, `Execution policy`) as a mutable current snapshot. When the user adds scope, corrects assumptions, changes output expectations, or gives durable workflow preferences during a reused/active DOP run, update the relevant snapshot section and add a short timestamped entry under `## Mission addenda`. Do not turn mission into a full transcript; put detailed evidence in `internal/` and detailed audit chains in `output/90_error_report.md` / `output/91_traceability.md`.
+Keep the main sections (`Objective`, `Success criteria`, `Constraints`, `Inputs`, `Expected outputs`, `Execution policy`) as a mutable current snapshot. When the user adds scope, corrects assumptions, changes output expectations, or gives durable workflow preferences during a reused/active DOP run, update the relevant snapshot section and add a short timestamped entry under `## Mission addenda`. Do not turn mission into a full transcript; put detailed evidence in `internal/` and detailed audit chains in `output/90-error-report.md` / `output/91-traceability.md`.
 
 On reuse, read and update `mission.md` before launching new work: refresh `updated_at`, set status back to `active` if work resumes after completion, append a brief addendum for the new request, and update success criteria/expected outputs if the done definition changed.
 
@@ -225,7 +225,7 @@ Do not violate these:
 
 1. Write or update `mission.md`, the layout-specific recovery file, the layout-specific queue (`internal/tasks.jsonl` for v2), and the worker task file before launching long work.
 2. Workers write detailed work only under `internal/agents/<task-id>/` unless explicitly assigned a shared human deliverable under `output/`.
-3. Shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent_registry.md`, `internal/recovery_state.md` in v2) have one writer: the supervisor or a real runner. Workers do not edit them directly unless the task explicitly grants ownership and there is a lock or runner API.
+3. Shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md` in v2) have one writer: the supervisor or a real runner. Workers do not edit them directly unless the task explicitly grants ownership and there is a lock or runner API.
 4. Raw data, long logs, evidence, drafts, repositories, downloaded references, and debugging material go under `internal/`; keep worker `handoff.md` short. Artifacts should be durable but not reckless: avoid writing secrets, tokens, private account dumps, or unnecessary huge raw blobs; redact, summarize, or store pointers plus checksums/metadata when appropriate.
 5. Synchronous subagents are not durable/background workers; if the parent turn is interrupted, they can be cancelled.
 6. When assigning work to a child worker, assume it may not have loaded this DOP skill. Include a compact LLL contract inline instead of only saying "use LLL":
@@ -237,7 +237,7 @@ Do not violate these:
    - Keep `handoff.md` short: status, output paths, key findings, risks/blockers, next step.
    - Keep claims traceable to artifact paths, sources, commands, or validation notes.
    - If blocked, record what was tried and propose the smallest fallback.
-   - If writing human-facing outputs, update or request an update to `output/00_index.md`.
+   - If writing human-facing outputs, update or request an update to `output/00-index.md`.
    - If you create task files with a helper or template, verify the generated `task.md` itself contains this compact contract; do not assume a separate prompt template will always travel with the task.
 7. Runtime-specific carriers are examples/adapters, not the protocol. Keep brand/tool details in adapter notes, project rules, presets, or environment context.
 8. For long-running, multi-stage, background, or multi-worker LLL work, provide brief progress updates distinct from final reports.
@@ -265,7 +265,7 @@ LLL's public skill stays portable. User-specific and environment-specific prefer
 SKILL.local.md
 ```
 
-This file is local-only and should be gitignored. If it exists, read it near the start of nontrivial LLL work after `SKILL.md`; if it does not exist, continue without asking the user to create it. Treat it as defaults and context, not as the run's source of truth. When a local preference materially affects the current run, copy the relevant decision into `mission.md`, `output/91_traceability.md`, or `internal/handoff.md` so recovery does not depend on hidden local state.
+This file is local-only and should be gitignored. If it exists, read it near the start of nontrivial LLL work after `SKILL.md`; if it does not exist, continue without asking the user to create it. Treat it as defaults and context, not as the run's source of truth. When a local preference materially affects the current run, copy the relevant decision into `mission.md`, `output/91-traceability.md`, or `internal/handoff.md` so recovery does not depend on hidden local state.
 
 Before writing any durable preference, identify the user's real intent and choose the right layer:
 
@@ -306,9 +306,9 @@ Use `⟲` as the entry separator: it evokes the living loop, is uncommon in norm
 8. Keep supervisor context small: read `mission.md`, `internal/` queue/registry/handoffs, `output/` synthesis/audit files, validation, and selected artifacts only when needed.
 9. Synthesize from files.
 10. Validate independently.
-11. Record errors/lessons and self-maintenance actions in `output/90_error_report.md` even when issues were fixed inline.
+11. Record errors/lessons and self-maintenance actions in `output/90-error-report.md` even when issues were fixed inline.
 12. Before final packaging, check that `output/` body text follows the user-specified output language or current interaction language, without surfacing language metadata unless language itself is part of the task.
-13. Ensure `mission.md`, `output/00_index.md`, `output/91_traceability.md`, and `output/99_next_steps.md` are current before final delivery.
+13. Ensure `mission.md`, `output/00-index.md`, `output/91-traceability.md`, and `output/99-next-steps.md` are current before final delivery.
 14. Final reply points to deliverables and a short conclusion.
 
 ## Progress updates
@@ -377,11 +377,11 @@ If `FAIL`, write concrete follow-up tasks and continue if possible. If `PASS_WIT
 
 Treat every editable skill as living procedural memory, not a static document.
 
-Create `output/90_error_report.md` by default for meaningful DOP runs, especially any run that changes workflows, skills, tools, or user-facing procedures. If no errors/corrections occurred, the file should explicitly say no meaningful errors were recorded. Do not omit the file just because everything went well.
+Create `output/90-error-report.md` by default for meaningful DOP runs, especially any run that changes workflows, skills, tools, or user-facing procedures. If no errors/corrections occurred, the file should explicitly say no meaningful errors were recorded. Do not omit the file just because everything went well.
 
-During LLL, `output/90_error_report.md` records internal workflow/runtime abnormalities and their repairs, not the user's goals. Record failed assumptions, worker failures, adapter/quoting/tool issues, path-safety issues, validation failures, queue/registry drift, stale or missing skill guidance, weak triggers, and better verification methods. A user correction belongs here only when it reveals that the workflow violated an existing contract or made a wrong internal assumption. New user goals, scope additions, design decisions, and normal requirements belong in `mission.md` addenda, `internal/tasks.jsonl`, `output/91_traceability.md`, or a numbered deliverable instead. Small issues may be fixed directly, but meaningful workflow-relevant corrections should still be logged. Complex unresolved workflow issues or optional follow-up work should also appear in `output/99_next_steps.md`.
+During LLL, `output/90-error-report.md` records internal workflow/runtime abnormalities and their repairs, not the user's goals. Record failed assumptions, worker failures, adapter/quoting/tool issues, path-safety issues, validation failures, queue/registry drift, stale or missing skill guidance, weak triggers, and better verification methods. A user correction belongs here only when it reveals that the workflow violated an existing contract or made a wrong internal assumption. New user goals, scope additions, design decisions, and normal requirements belong in `mission.md` addenda, `internal/tasks.jsonl`, `output/91-traceability.md`, or a numbered deliverable instead. Small issues may be fixed directly, but meaningful workflow-relevant corrections should still be logged. Complex unresolved workflow issues or optional follow-up work should also appear in `output/99-next-steps.md`.
 
-Use `output/90_error_report.md` entries with:
+Use `output/90-error-report.md` entries with:
 - what happened;
 - evidence/path;
 - impact;
@@ -399,19 +399,19 @@ For LLL itself, this loop is mandatory: LLL should improve from its own failures
 ## Recovery quickstart
 
 When resuming:
-1. Read `mission.md`, the layout-specific recovery file (`internal/recovery_state.md` for v2), queue, registry, and recent event log tail.
+1. Read `mission.md`, the layout-specific recovery file (`internal/recovery-state.md` for v2), queue, registry, and recent event log tail.
 2. Identify done, active, blocked, failed, pending, and stale tasks.
 3. Check background processes/jobs if possible.
 4. Reclaim stale in-progress tasks only after checking lease/heartbeat/process/log evidence.
 5. Read relevant worker `handoff.md` files before raw artifacts.
-6. Read `output/00_index.md`, then only the relevant human-facing/audit files.
+6. Read `output/00-index.md`, then only the relevant human-facing/audit files.
 7. Continue from the last safe checkpoint.
 8. Update recovery state before launching new work.
-9. If reusing the workspace, update `output/00_index.md`, append local-timezone timestamped entries to `output/90_error_report.md`/`output/91_traceability.md` as needed, and rewrite `output/99_next_steps.md` to the current next action.
+9. If reusing the workspace, update `output/00-index.md`, append local-timezone timestamped entries to `output/90-error-report.md`/`output/91-traceability.md` as needed, and rewrite `output/99-next-steps.md` to the current next action.
 
 Recover from files, not chat history, unless files are missing.
 
-Internal append-only files are a context-engineering surface, not just logs. Treat these as append-only by design: `internal/runs.jsonl`, `internal/logs/*.log`, `internal/agents/<task-id>/log.txt`, and any explicitly named `internal/**/events.jsonl`, `journal.md`, or `history.md`. Do not routinely read them in full on resume. Prefer status snapshots and compact handoffs first (`mission.md`, `internal/recovery_state.md`, `internal/tasks.jsonl`, `internal/agent_registry.md`, `internal/agents/*/status.json`, `internal/agents/*/handoff.md`), then read only the tail, entries since the last checkpoint, or entries for a specific task/time window. If a log grows large, add or refresh a compact snapshot/handoff rather than forcing every future agent to ingest the full append-only history.
+Internal append-only files are a context-engineering surface, not just logs. Treat these as append-only by design: `internal/runs.jsonl`, `internal/logs/*.log`, `internal/agents/<task-id>/log.txt`, and any explicitly named `internal/**/events.jsonl`, `journal.md`, or `history.md`. Do not routinely read them in full on resume. Prefer status snapshots and compact handoffs first (`mission.md`, `internal/recovery-state.md`, `internal/tasks.jsonl`, `internal/agent-registry.md`, `internal/agents/*/status.json`, `internal/agents/*/handoff.md`), then read only the tail, entries since the last checkpoint, or entries for a specific task/time window. If a log grows large, add or refresh a compact snapshot/handoff rather than forcing every future agent to ingest the full append-only history.
 
 Queue authority rule: `internal/tasks.jsonl` owns scheduling state in v2; `internal/agents/<task-id>/status.json` is worker-local progress/evidence. If they drift, read `handoff.md`, `log.txt`, and artifacts, then have the supervisor or runner reconcile the queue rather than letting workers edit shared queue state directly. For transitional or legacy workdirs, use the equivalent `collab/` or root paths.
 
@@ -424,11 +424,11 @@ Match the user's language. Keep the chat response short unless the user asked fo
 
 工作目录：<path>
 主要产出：
-- <output/01_final_report.md or primary output path>
-- <output/90_error_report.md>
-- <output/91_traceability.md>
-- <output/99_next_steps.md>
-- <internal/validation_report.md>
+- <output/01-final-report.md or primary output path>
+- <output/90-error-report.md>
+- <output/91-traceability.md>
+- <output/99-next-steps.md>
+- <internal/validation-report.md>
 
 一句话结论：<short conclusion>
 注意事项：<0-3 caveats>

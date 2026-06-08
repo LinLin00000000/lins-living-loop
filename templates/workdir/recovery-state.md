@@ -16,5 +16,5 @@ next_supervisor_action: define or run next task
 2. Validate [internal/tasks.jsonl](tasks.jsonl) and [internal/runs.jsonl](runs.jsonl).
 3. Inspect task status summary.
 4. Read only relevant worker handoffs under internal/agents/<task-id>/handoff.md first.
-5. Read [output/00_index.md](../output/00_index.md) for human-facing deliverables and audit files.
+5. Read [output/00-index.md](../output/00-index.md) for human-facing deliverables and audit files.
 6. Continue from last_safe_checkpoint.

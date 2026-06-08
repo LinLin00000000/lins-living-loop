@@ -24,19 +24,19 @@ New LLL workdirs use the canonical v2 layout: root `mission.md`, process/agent s
 
 - `internal/tasks.jsonl`: current queue; safe to rewrite atomically
 - `internal/runs.jsonl`: append-only event history
-- `internal/recovery_state.md`: compact resume instructions
+- `internal/recovery-state.md`: compact resume instructions
 - `internal/handoff.md`: compact supervisor handoff for future recovery
-- `internal/validation_report.md`: validation verdict and evidence
+- `internal/validation-report.md`: validation verdict and evidence
 - `internal/inputs/`: raw/reference materials introduced during the run
 - `internal/agents/<task-id>/status.json`: per-task current state
 - `internal/agents/<task-id>/handoff.md`: worker handoff
-- `output/00_index.md`: required index of every file in output/
-- `output/90_error_report.md`: required append-only error/correction/self-maintenance report
-- `output/91_traceability.md`: required append-only claim/source/change trace map
-- `output/99_next_steps.md`: required mutable current next actions
-- `output/01_<deliverable>.md`: numbered primary human-facing outputs as needed
+- `output/00-index.md`: required index of every file in output/
+- `output/90-error-report.md`: required append-only error/correction/self-maintenance report
+- `output/91-traceability.md`: required append-only claim/source/change trace map
+- `output/99-next-steps.md`: required mutable current next actions
+- `output/01-<deliverable>.md`: numbered primary human-facing outputs as needed
 
-Transitional workdirs may use `collab/` + `readable/` with root recovery/handoff/validation files. Older legacy workdirs may have `tasks.jsonl`, `runs.jsonl`, `agent_registry.md`, `agents/`, and `deliverables/` at the root. Resume them as-is, but create new workdirs with `internal/` and `output/`.
+Transitional workdirs may use `collab/` + `readable/` with root recovery/handoff/validation files. Older legacy workdirs may have `tasks.jsonl`, `runs.jsonl`, `agent-registry.md`, `agents/`, and `deliverables/` at the root. Resume them as-is, but create new workdirs with `internal/` and `output/`.
 
 ## Task schema
 
@@ -90,7 +90,7 @@ Recommended fields:
 3. `status`: summarize queue counts and active/blocked tasks.
 4. `event`: append an event.
 5. `set-status`: update task state and per-task status file.
-6. `checkpoint`: rewrite the layout-specific `recovery_state.md` with latest safe point.
+6. `checkpoint`: rewrite the layout-specific `recovery-state.md` with latest safe point.
 7. `validate`: check required files, JSONL validity, safe task output paths, legal statuses, dependencies, per-task file presence, required output audit files, and output index coverage.
 
 `validate` is structure validation. It does not prove the mission is complete, claims are correct, tests passed, or deliverables are useful. Mission validation remains a separate independent LLL step.
@@ -111,7 +111,7 @@ Reclaim only after checking the worker log/process when possible.
 
 Shared LLL state has one writer at a time.
 
-- In manual LLL-lite, the supervisor owns `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent_registry.md`, and `internal/recovery_state.md`.
+- In manual LLL-lite, the supervisor owns `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, and `internal/recovery-state.md`.
 - In runner mode, the runner owns those shared files or exposes a narrow API/lock for updates.
 - Workers write only `internal/agents/<task-id>/` unless explicitly assigned a numbered shared human deliverable under `output/`.
 
@@ -145,7 +145,7 @@ This skill includes `scripts/lll.py`, a small stdlib helper. `scripts/lll.py` / 
 ## Helper quickstart
 
 ```bash
-python3 scripts/lll.py init ~/lll-work/YYYYMMDD_HHMMSS_slug --objective "<objective>"
+python3 scripts/lll.py init ~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case --objective "<objective>"
 python3 scripts/lll.py add-task <lll-workdir> --id T001 --title "<short title>" --goal "<worker goal>" --carrier agent_cli --preset deep-research
 python3 scripts/lll.py status <lll-workdir> --all
 python3 scripts/lll.py validate <lll-workdir>
@@ -157,7 +157,7 @@ The helper is intentionally conservative: it refuses to reinitialize an existing
 
 For higher confidence, validate at least:
 
-- required core files exist: `mission.md`, `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent_registry.md`, `internal/recovery_state.md`, `internal/handoff.md`, `internal/validation_report.md`;
+- required core files exist: `mission.md`, `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md`, `internal/handoff.md`, `internal/validation-report.md`;
 - `internal/tasks.jsonl` and `internal/runs.jsonl` parse as JSONL;
 - task ids are unique and non-empty;
 - task statuses are one of `pending`, `ready`, `in_progress`, `blocked`, `done`, `failed`, `cancelled`;
@@ -165,9 +165,9 @@ For higher confidence, validate at least:
 - every task `out` is relative, cannot escape the workdir, and resolves under `internal/agents/<task-id>/` for v2, `collab/agents/<task-id>/` for v1, or legacy `agents/<task-id>/` for old workdirs;
 - every task directory has `task.md`, `status.json`, `log.txt`, `handoff.md`, and `artifacts/`;
 - task-local `status.json` agrees with the queue where practical;
-- `internal/agent_registry.md` mentions every worker/task expected to exist;
-- `output/00_index.md` exists and mentions every file in `output/`;
-- `output/90_error_report.md`, `output/91_traceability.md`, and `output/99_next_steps.md` exist;
+- `internal/agent-registry.md` mentions every worker/task expected to exist;
+- `output/00-index.md` exists and mentions every file in `output/`;
+- `output/90-error-report.md`, `output/91-traceability.md`, and `output/99-next-steps.md` exist;
 - validation and internal handoff files exist before final delivery.
 
 Even strict structure validation is not mission validation. It only says the recovery surface is coherent enough to inspect.
@@ -184,6 +184,6 @@ Treat these as append-only by design:
 - `internal/agents/<task-id>/log.txt`: task-local command/source/error log
 - optional `internal/**/events.jsonl`, `journal.md`, `history.md`: only if explicitly declared append-only
 
-Resume order should prefer compact state first: `mission.md`, `internal/recovery_state.md`, `internal/tasks.jsonl`, `internal/agent_registry.md`, task-local `status.json`, and `handoff.md`. Then read append-only files only by tail, by task id, or by entries since the last checkpoint. If a log becomes important but large, write or refresh a compact handoff/snapshot instead of making future agents ingest the whole history.
+Resume order should prefer compact state first: `mission.md`, `internal/recovery-state.md`, `internal/tasks.jsonl`, `internal/agent-registry.md`, task-local `status.json`, and `handoff.md`. Then read append-only files only by tail, by task id, or by entries since the last checkpoint. If a log becomes important but large, write or refresh a compact handoff/snapshot instead of making future agents ingest the whole history.
 
 Every append-only entry should include a local-timezone ISO-8601/RFC3339 timestamp so later agents can read “since checkpoint” slices.
