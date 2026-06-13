@@ -37,7 +37,23 @@ Use LLL when:
 - The main agent would need to carry too much raw material.
 - Correctness depends on a separate review or validation pass.
 
-Do not use full LLL for simple Q&A, quick searches, tiny edits, or tasks safely completed in a few tool calls. If unsure, choose LLL-lite: a small workdir, task list, handoffs, and validation, without a runner or extra framework.
+Do not use full LLL for simple Q&A, quick searches, tiny edits, or tasks safely completed in a few tool calls. If unsure, choose the smallest honest mode that preserves the work without pretending to have more process than actually ran.
+
+## Mode selection: full LLL vs LLL Lite
+
+The supervisor may choose the mode case-by-case. The choice should optimize for reliability and context discipline, not ceremony.
+
+Use **full LLL** when the work has enough independent surface area that the main thread would otherwise become the worker:
+- The task explicitly asks for 深度调研/deep research and includes three or more independent research objects, especially when each object is expected to require multiple official docs, source files, specs, repos, or runtime checks.
+- The work naturally splits into independent subject-matter tracks plus synthesis and validation, such as comparing several tools, libraries, vendors, protocols, papers, repos, or architecture options.
+- Correctness benefits from separate roles: subject researchers, a synthesis worker, and an independent validator.
+- The expected raw evidence is large enough that the supervisor would need to read many long pages/files or keep lots of uncompressed details in chat.
+
+For that pattern, prefer real isolation: run parallel subject workers when the runtime supports them, then synthesize from their handoffs/artifacts, then validate with a separate reviewer/validator context. The supervisor should keep only the mission, task map, compact handoffs, final synthesis, validation notes, and selected evidence needed to resolve conflicts. If the runtime has no suitable worker carrier, record that limitation explicitly and choose between (a) full LLL with clearly labeled `supervisor-inline` records only when needed for auditability, not as fake Agent 1/2/3 stand-ins, or (b) LLL Lite if durability needs are modest.
+
+Use **LLL Lite** for light or medium tasks where one agent can do the work without context explosion, durable retries, or multiple independent roles. Lite is still file-backed, but it should be visibly simple: a small mission/notes/output/validation set is enough. Do not create ornate `internal/agents/T001...` directories, fake Agent 1/2/3 records, or multi-worker registries when the supervisor did all the work inline. If there were no real workers, say so plainly in notes or validation.
+
+Quick rule: if the task has three or more independent research objects **and** likely requires reading multiple source/docs across the work, use full LLL by default. If it is a small single-track task, use LLL Lite or no LLL at all.
 
 ## Living loop
 
@@ -124,6 +140,22 @@ Canonical v2 layout for new workdirs:
 ```
 
 Keep the root shallow. For new workdirs, root should generally contain only `mission.md`, `internal/`, and `output/`. Put raw repositories, source dumps, scraped pages, long logs, validation, recovery state, final/internal handoffs, and other process files under `internal/`. Put only human-facing deliverables under `output/`.
+
+For **LLL Lite**, use a deliberately smaller shape when there are no real workers or durable runner needs. The minimum useful Lite shape is usually:
+
+```text
+<lll-workdir>/
+  mission.md
+  notes.md                      # compact working notes, assumptions, commands, sources
+  output/
+    00-index.md
+    01-<deliverable>.md
+    90-error-report.md          # optional for tiny clean runs; required when a workflow issue occurs
+    91-traceability.md          # optional for tiny clean runs; required for research/claims
+    99-next-steps.md            # optional when there is a real next-step surface
+```
+
+Lite may add `internal/validation-report.md` or `validation.md` for nontrivial checks, but it should not copy the full `internal/agents/<task-id>/` tree unless there are actual worker contexts, background jobs, or a real runner. If the supervisor performs the work inline, write `notes.md` or a compact `internal/handoff.md`; do not invent agent directories to make the run look more rigorous.
 
 Existing layouts remain valid for resume:
 - Transitional v1: `collab/` for process state, `readable/` for human outputs, with root `recovery-state.md`, `handoff.md`, and `validation-report.md`.
@@ -223,8 +255,8 @@ On reuse, read and update `mission.md` before launching new work: refresh `updat
 
 Do not violate these:
 
-1. Write or update `mission.md`, the layout-specific recovery file, the layout-specific queue (`internal/tasks.jsonl` for v2), and the worker task file before launching long work.
-2. Workers write detailed work only under `internal/agents/<task-id>/` unless explicitly assigned a shared human deliverable under `output/`.
+1. Write or update `mission.md`, the layout-specific recovery file, the layout-specific queue (`internal/tasks.jsonl` for v2), and the worker task file before launching long work. In LLL Lite, the equivalent can be a compact `mission.md` plus `notes.md`/`validation.md`; do not force a full queue/worker tree for a one-person light task.
+2. Workers write detailed work only under `internal/agents/<task-id>/` unless explicitly assigned a shared human deliverable under `output/`. Only create worker directories for real worker contexts, background jobs, independent CLIs, human contributors, or clearly labeled `supervisor-inline` tasks needed for auditability. Do not create fake Agent 1/2/3 structures when the supervisor did the work inline.
 3. Shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md` in v2) have one writer: the supervisor or a real runner. Workers do not edit them directly unless the task explicitly grants ownership and there is a lock or runner API.
 4. Raw data, long logs, evidence, drafts, repositories, downloaded references, and debugging material go under `internal/`; keep worker `handoff.md` short. Artifacts should be durable but not reckless: avoid writing secrets, tokens, private account dumps, or unnecessary huge raw blobs; redact, summarize, or store pointers plus checksums/metadata when appropriate.
 5. Synchronous subagents are not durable/background workers; if the parent turn is interrupted, they can be cancelled.
@@ -301,8 +333,8 @@ Use `⟲` as the entry separator: it evokes the living loop, is uncommon in norm
 3. If `SKILL.local.md` exists next to this `SKILL.md`, read it for local/user-specific defaults; otherwise skip it silently.
 4. Create a fresh workdir by default, or resume only with a clear reuse signal.
 5. Decompose into orthogonal tasks with explicit outputs and acceptance checks.
-6. Choose the lightest carrier for each task.
-7. Launch work; make workers write files and return short handoffs.
+6. Choose the lightest honest carrier for each task. Use LLL Lite for simple single-track work; use full LLL plus real worker isolation when the task has three or more independent research objects and likely requires reading multiple source/docs/runtime sources across those objects.
+7. Launch work; make workers write files and return short handoffs. If there are no real workers, do not manufacture worker records; write compact notes and say the supervisor handled the task inline.
 8. Keep supervisor context small: read `mission.md`, `internal/` queue/registry/handoffs, `output/` synthesis/audit files, validation, and selected artifacts only when needed.
 9. Synthesize from files.
 10. Validate independently.
@@ -339,7 +371,7 @@ Example:
 
 ## Carrier escalation ladder
 
-Use the lightest reliable carrier:
+Use the lightest reliable carrier, but do not confuse "lightest" with "inline everything." Escalate as soon as the main supervisor would otherwise ingest large raw context or impersonate multiple roles:
 
 | level | carrier | use when |
 |---|---|---|
@@ -353,6 +385,8 @@ Use the lightest reliable carrier:
 
 Do not default to LangGraph, Temporal, Celery, Kanban, a database, or a daemon. They are upgrade paths or adapters, not LLL's default core. If the user fixes a carrier, such as a specific code agent for coding, treat it as given and design coordination rather than re-comparing every tool.
 
+For multi-object deep research, the default full-LLL shape is: subject workers in parallel → synthesis worker → independent validator. If the runtime supports only a limited number of parallel children, batch the subject workers or use independent agent CLIs/background carriers. The supervisor's job is to route, read compact handoffs, resolve conflicts, and keep the durable filesystem current—not to personally absorb every raw source.
+
 For concrete commands and fallbacks, load `references/adapters.md`.
 
 ## Synthesis and validation
@@ -363,7 +397,7 @@ Every nontrivial LLL task needs an independent validation pass by someone other 
 
 Validate two layers:
 
-1. Structure validation: required files exist, JSONL parses, task ids/statuses/dependencies are valid, task output paths stay under the layout-specific worker directory (`internal/agents/<task-id>/` for v2), per-task files exist, output files are numbered and indexed, required audit files exist, and tasks/registry/status do not drift. When `scripts/lll.py` is available, run it against the final/resumed workdir before delivery; treat helper validation as baseline structure validation unless it explicitly implements the stricter checklist in `references/minimal-runner.md`. If old structural debt appears, repair it honestly with evidence-labeled recovery notes rather than fabricating missing history, then re-run validation.
+1. Structure validation: required files exist, JSONL parses, task ids/statuses/dependencies are valid, task output paths stay under the layout-specific worker directory (`internal/agents/<task-id>/` for v2), per-task files exist, output files are numbered and indexed, required audit files exist, and tasks/registry/status do not drift. When `scripts/lll.py` is available, run it against the final/resumed workdir before delivery; treat helper validation as baseline structure validation unless it explicitly implements the stricter checklist in `references/minimal-runner.md`. The helper's queue/status vocabulary uses `done` for completed tasks; if you hand-create `internal/tasks.jsonl`, prefer `done` rather than `completed` to avoid a false structure failure. If old structural debt appears, repair it honestly with evidence-labeled recovery notes rather than fabricating missing history, then re-run validation.
 2. Mission validation: outputs satisfy mission success criteria, numbered `output/` deliverables exist, human-facing output body text uses the chosen human language, claims trace to linked evidence, assumptions are labeled, failed/blocked tasks were handled, code/tests/builds ran or failures are documented, the error/traceability/next-step files are current, and the result is useful without raw intermediate context.
 
 Verdicts:
