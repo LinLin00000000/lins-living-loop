@@ -39,7 +39,16 @@ Use LLL when:
 
 Do not use full LLL for simple Q&A, quick searches, tiny edits, or tasks safely completed in a few tool calls. If unsure, choose the smallest honest mode that preserves the work without pretending to have more process than actually ran.
 
-## Mode selection: full LLL vs LLL Lite
+## Mode selection: structure mode vs carrier
+
+LLL has two orthogonal decisions. Keep them separate:
+
+| axis | choices | answers |
+|---|---|---|
+| **Structure mode** | no LLL, LLL Lite, full LLL | How much durable workspace, state, validation, and recovery surface does this task need? |
+| **Carrier / adapter** | current supervisor, synchronous subagent, foreground script, background process, independent agent CLI, scheduler/cron, thin runner, Kanban/board | What actually executes each unit of work? |
+
+Do not treat Lite, Full, Background, Runner, and Kanban as peer modes. **Lite/full are structure modes. Background, runner, scheduler, and Kanban are carriers/adapters.** Choose the structure mode first, then choose the lightest reliable carrier for each task. Examples: `LLL Lite + foreground script`, `full LLL + parallel subagents`, `full LLL + background process`, and `full LLL + Kanban/board` are all valid combinations when their cost is justified. `LLL Lite + Kanban` is usually a smell: if a board is needed for collaboration, recovery, dependencies, or long-lived visibility, the work probably deserves full LLL. A lightweight external board used only as a human-facing status mirror can remain outside the LLL structure decision.
 
 The supervisor may choose the mode case-by-case. The choice should optimize for reliability and context discipline, not ceremony.
 
@@ -333,15 +342,16 @@ Use `⟲` as the entry separator: it evokes the living loop, is uncommon in norm
 3. If `SKILL.local.md` exists next to this `SKILL.md`, read it for local/user-specific defaults; otherwise skip it silently.
 4. Create a fresh workdir by default, or resume only with a clear reuse signal.
 5. Decompose into orthogonal tasks with explicit outputs and acceptance checks.
-6. Choose the lightest honest carrier for each task. Use LLL Lite for simple single-track work; use full LLL plus real worker isolation when the task has three or more independent research objects and likely requires reading multiple source/docs/runtime sources across those objects.
-7. Launch work; make workers write files and return short handoffs. If there are no real workers, do not manufacture worker records; write compact notes and say the supervisor handled the task inline.
-8. Keep supervisor context small: read `mission.md`, `internal/` queue/registry/handoffs, `output/` synthesis/audit files, validation, and selected artifacts only when needed.
-9. Synthesize from files.
-10. Validate independently.
-11. Record errors/lessons and self-maintenance actions in `output/90-error-report.md` even when issues were fixed inline.
-12. Before final packaging, verify that `output/` body text follows the user-specified output language or current interaction language, without surfacing language metadata unless language itself is part of the task. If a human-facing deliverable is in the wrong language, rewrite it before delivery and record the workflow error.
-13. Ensure `mission.md`, `output/00-index.md`, `output/91-traceability.md`, and `output/99-next-steps.md` are current before final delivery.
-14. Final reply points to deliverables and a short conclusion.
+6. Choose the structure mode first: no LLL, LLL Lite, or full LLL. Use LLL Lite for simple single-track work; use full LLL when the task has three or more independent research objects and likely requires reading multiple source/docs/runtime sources across those objects.
+7. Choose the lightest honest carrier for each task: inline supervisor, subagent, script, background process, independent CLI, scheduler, runner, or board. Do not confuse carrier choice with structure mode.
+8. Launch work; make workers write files and return short handoffs. If there are no real workers, do not manufacture worker records; write compact notes and say the supervisor handled the task inline.
+9. Keep supervisor context small: read `mission.md`, `internal/` queue/registry/handoffs, `output/` synthesis/audit files, validation, and selected artifacts only when needed.
+10. Synthesize from files.
+11. Validate independently.
+12. Record errors/lessons and self-maintenance actions in `output/90-error-report.md` even when issues were fixed inline.
+13. Before final packaging, verify that `output/` body text follows the user-specified output language or current interaction language, without surfacing language metadata unless language itself is part of the task. If a human-facing deliverable is in the wrong language, rewrite it before delivery and record the workflow error.
+14. Ensure `mission.md`, `output/00-index.md`, `output/91-traceability.md`, and `output/99-next-steps.md` are current before final delivery.
+15. Final reply points to deliverables and a short conclusion.
 
 ## Progress updates
 

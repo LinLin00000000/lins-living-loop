@@ -4,6 +4,8 @@ This file maps the portable LLL protocol to concrete runtimes. Treat every comma
 
 The core protocol stays runtime-independent. An adapter only answers: how do I run this worker here, how do I observe it, how do I recover from failure, and where does it write durable output?
 
+Adapters are **carriers**, not LLL structure modes. Choose `no LLL` / `LLL Lite` / `full LLL` first, then use this file to pick the lightest reliable carrier for each unit of work. Background processes, schedulers, runners, and Kanban/boards are execution adapters; they do not replace the Lite/full structure decision.
+
 ## Adapter capability contract
 
 Before using a carrier, confirm or record:
