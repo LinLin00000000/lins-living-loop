@@ -516,11 +516,33 @@ next_supervisor_action: {args.next_action}
     print("checkpoint updated")
 
 
-def validate_output_index(wd: Path) -> bool:
+def detect_validation_mode(wd: Path, requested: str) -> str:
+    """Return `full` or `lite` for structure validation.
+
+    Auto mode is intentionally conservative: if a layout-specific task queue
+    exists, auto chooses full validation so broken full LLL runs are not silently
+    accepted as Lite. Checklist-style Lite workdirs with a queue must opt in via
+    `--mode lite`. Taskless `mission.md` + `notes.md` workdirs can be detected as
+    Lite automatically.
+    """
+    if requested in {"full", "lite"}:
+        return requested
+    if tasks_path(wd).exists():
+        return "full"
+    worker_root = wd / worker_root_rel(wd)
+    has_worker_dirs = worker_root.exists() and any(worker_root.iterdir())
+    if not has_worker_dirs and (wd / "notes.md").exists():
+        return "lite"
+    if (wd / "mission.md").exists():
+        return "lite"
+    return "full"
+
+
+def validate_output_index(wd: Path, *, mode: str = "full") -> bool:
     kind = layout_kind(wd)
     outdir = output_dir(wd)
     if not outdir.exists():
-        if kind == LAYOUT_V2:
+        if kind == LAYOUT_V2 and mode != "lite":
             print(f"missing: {rel_to_workdir(wd, outdir)}")
             return False
         return True
@@ -536,7 +558,7 @@ def validate_output_index(wd: Path) -> bool:
         if not any(name in text for name in equivalent_names(path.name)):
             ok = False
             print(f"output index does not mention {rel_to_workdir(wd, path)}")
-    if kind == LAYOUT_V2:
+    if kind == LAYOUT_V2 and mode != "lite":
         for name in [ERROR_REPORT, TRACEABILITY, NEXT_STEPS]:
             p = existing_or_canonical(outdir, name)
             if not p.exists():
@@ -551,21 +573,32 @@ def validate_output_index(wd: Path) -> bool:
 def cmd_validate(args: argparse.Namespace) -> None:
     wd = Path(args.workdir).expanduser().resolve()
     kind = layout_kind(wd)
-    required = [
-        "mission.md",
-        rel_to_workdir(wd, recovery_path(wd)),
-        rel_to_workdir(wd, tasks_path(wd)),
-        rel_to_workdir(wd, runs_path(wd)),
-        rel_to_workdir(wd, registry_path(wd)),
-    ]
-    if kind == LAYOUT_V2:
-        required.extend([rel_to_workdir(wd, handoff_path(wd)), rel_to_workdir(wd, validation_path(wd))])
+    mode = detect_validation_mode(wd, args.mode)
+    required = ["mission.md"]
+    if mode == "lite":
+        if not (wd / "notes.md").exists() and not validation_path(wd).exists() and not (wd / "validation.md").exists():
+            # Lite is intentionally small, but it still needs a compact recovery
+            # surface beyond the mission if there is no full internal state.
+            required.append("notes.md")
+    else:
+        required.extend([
+            rel_to_workdir(wd, recovery_path(wd)),
+            rel_to_workdir(wd, tasks_path(wd)),
+            rel_to_workdir(wd, runs_path(wd)),
+            rel_to_workdir(wd, registry_path(wd)),
+        ])
+        if kind == LAYOUT_V2:
+            required.extend([rel_to_workdir(wd, handoff_path(wd)), rel_to_workdir(wd, validation_path(wd))])
     ok = True
     for rel in required:
         if not (wd / rel).exists():
             ok = False
             print(f"missing: {rel}")
-    for rel in [rel_to_workdir(wd, tasks_path(wd)), rel_to_workdir(wd, runs_path(wd))]:
+    jsonl_paths = []
+    for pth in [tasks_path(wd), runs_path(wd)]:
+        if mode != "lite" or pth.exists():
+            jsonl_paths.append(rel_to_workdir(wd, pth))
+    for rel in jsonl_paths:
         try:
             read_jsonl(wd / rel)
         except SystemExit as e:
@@ -597,6 +630,8 @@ def cmd_validate(args: argparse.Namespace) -> None:
             if dep not in ids:
                 ok = False
                 print(f"task {task_id} has missing dependency {dep}")
+        if mode == "lite" and not t.get("out"):
+            continue
         try:
             out = ensure_safe_relative_out(wd, t.get("out") or default_task_out(wd, task_id), task_id)
         except SystemExit as e:
@@ -620,10 +655,10 @@ def cmd_validate(args: argparse.Namespace) -> None:
             except json.JSONDecodeError as e:
                 ok = False
                 print(f"task {task_id} invalid status.json: {e}")
-    if not validate_output_index(wd):
+    if not validate_output_index(wd, mode=mode):
         ok = False
     if ok:
-        print(f"LLL workdir structure valid ({kind})")
+        print(f"LLL workdir structure valid ({kind}, {mode})")
     else:
         raise SystemExit(1)
 
@@ -696,6 +731,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("validate", help="validate required files, JSONL, task dirs, and output index")
     s.add_argument("workdir")
+    s.add_argument("--mode", choices=["auto", "full", "lite"], default="auto", help="validation mode: auto detects honest Lite workdirs, full keeps strict worker-tree checks")
     s.set_defaults(func=cmd_validate)
 
     return p

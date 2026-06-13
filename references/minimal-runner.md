@@ -91,7 +91,7 @@ Recommended fields:
 4. `event`: append an event.
 5. `set-status`: update task state and per-task status file.
 6. `checkpoint`: rewrite the layout-specific `recovery-state.md` with latest safe point.
-7. `validate`: check required files, JSONL validity, safe task output paths, legal statuses, dependencies, per-task file presence, required output audit files, and output index coverage.
+7. `validate`: check required files, JSONL validity, safe task output paths, legal statuses, dependencies, per-task file presence, required output audit files, and output index coverage. It supports `--mode auto|full|lite`; `auto` stays conservative and treats any workdir with a layout-specific task queue as full validation, full mode keeps strict worker-tree checks, and lite mode accepts simple honest Lite workspaces without fake worker directories.
 
 `validate` is structure validation. It does not prove the mission is complete, claims are correct, tests passed, or deliverables are useful. Mission validation remains a separate independent LLL step.
 
@@ -149,6 +149,8 @@ python3 scripts/lll.py init ~/lll-work/YYYYMMDD-HHMMSS_short-description-in-keba
 python3 scripts/lll.py add-task <lll-workdir> --id T001 --title "<short title>" --goal "<worker goal>" --carrier agent_cli --preset deep-research
 python3 scripts/lll.py status <lll-workdir> --all
 python3 scripts/lll.py validate <lll-workdir>
+python3 scripts/lll.py validate <lll-workdir> --mode lite   # explicit Lite validation
+python3 scripts/lll.py validate <lll-workdir> --mode full   # strict worker-tree validation
 ```
 
 The helper is intentionally conservative: it refuses to reinitialize an existing workdir unless `--force` is explicit, and task output paths must stay under `internal/agents/<task-id>/` for new v2 workdirs, `collab/agents/<task-id>/` for transitional v1 workdirs, or legacy `agents/<task-id>/` when resuming old root-layout workdirs.
