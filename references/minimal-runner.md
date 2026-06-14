@@ -147,6 +147,7 @@ This skill includes `scripts/lll.py`, a small stdlib helper. `scripts/lll.py` / 
 ```bash
 python3 scripts/lll.py init ~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case --objective "<objective>"
 python3 scripts/lll.py add-task <lll-workdir> --id T001 --title "<short title>" --goal "<worker goal>" --carrier agent_cli --preset deep-research
+python3 scripts/lll.py add-task <lll-workdir> --id T002 --title "<dependent task>" --goal "<worker goal>" --depends-on T001
 python3 scripts/lll.py status <lll-workdir> --all
 python3 scripts/lll.py validate <lll-workdir>
 python3 scripts/lll.py validate <lll-workdir> --mode lite   # explicit Lite validation
@@ -154,6 +155,8 @@ python3 scripts/lll.py validate <lll-workdir> --mode full   # strict worker-tree
 ```
 
 The helper is intentionally conservative: it refuses to reinitialize an existing workdir unless `--force` is explicit, and task output paths must stay under `internal/agents/<task-id>/` for new v2 workdirs, `collab/agents/<task-id>/` for transitional v1 workdirs, or legacy `agents/<task-id>/` when resuming old root-layout workdirs.
+
+`add-task --depends-on` is repeatable and also accepts comma-separated lists for convenience, for example `--depends-on T001 --depends-on T002` or `--depends-on T001,T002`. After using helper scripts to add tasks or dependencies, inspect `internal/tasks.jsonl` before launching workers so queue ids, dependencies, and output paths match the intended task graph.
 
 ## Strict structure validation checklist
 

@@ -112,6 +112,25 @@ def write_jsonl_atomic(path: Path, rows: List[Dict[str, Any]]) -> None:
     atomic_write(path, text)
 
 
+def normalize_depends_on(values: List[str] | None) -> List[str]:
+    """Normalize repeated or comma-separated dependency arguments.
+
+    The CLI documents `--depends-on` as repeatable, but humans and agents often
+    pass a compact comma-separated value such as `--depends-on T001,T002`.
+    Split and trim those values here so validation does not later see one
+    impossible task id named `T001,T002`.
+    """
+    deps: List[str] = []
+    seen = set()
+    for value in values or []:
+        for dep in str(value).split(","):
+            dep = dep.strip()
+            if dep and dep not in seen:
+                deps.append(dep)
+                seen.add(dep)
+    return deps
+
+
 def layout_kind(workdir: Path) -> str:
     """Detect LLL layout while defaulting new/uninitialized workdirs to v2."""
     if (workdir / "internal" / "tasks.jsonl").exists() or ((workdir / "internal").exists() and (workdir / "output").exists()):
@@ -370,12 +389,13 @@ def cmd_add_task(args: argparse.Namespace) -> None:
     if any(t.get("id") == args.id for t in tasks):
         raise SystemExit(f"Task already exists: {args.id}")
     out = ensure_safe_relative_out(wd, args.out or default_task_out(wd, args.id), args.id)
+    depends_on = normalize_depends_on(args.depends_on)
     task = {
         "id": args.id,
         "title": args.title,
         "status": "pending",
         "priority": args.priority,
-        "depends_on": args.depends_on or [],
+        "depends_on": depends_on,
         "carrier": args.carrier,
         "preset": args.preset,
         "attempts": 0,
@@ -689,7 +709,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--carrier", default="current")
     s.add_argument("--preset", default="default")
     s.add_argument("--priority", type=int, default=10)
-    s.add_argument("--depends-on", action="append", default=[])
+    s.add_argument("--depends-on", action="append", default=[], help="dependency task id; repeat for multiple dependencies, or pass a comma-separated list")
     s.add_argument("--acceptance", action="append", default=[])
     s.add_argument("--inputs", action="append", default=[])
     s.add_argument("--max-attempts", type=int, default=2)
