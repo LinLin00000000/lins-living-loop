@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added a context-drift contract rule: large-context or compaction-prone tasks should externalize objective, constraints, decisions, current state, and validation criteria into LLL files before continuing.
 - Simplified new workdir layout: human-facing deliverables now live at the workdir root beside `mission.md`; new workdirs no longer create `output/`, `00-index.md`, or standalone next-step files.
 - Moved traceability and error reporting to append-only JSONL under `internal/traceability.jsonl` and `internal/error-report.jsonl`.
 - Updated helper script, templates, prompts, README, and key references to the compact current layout.

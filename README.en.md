@@ -19,12 +19,12 @@ LLL turns the main chat into a lightweight supervisor. Durable state lives in fi
 Use LLL for:
 
 - deep research, long writing, complex comparisons, code changes, audits, and validation-heavy work;
-- tasks that may overflow context, time out, or need recovery across turns;
+- tasks that may overflow context, time out, need recovery across turns, or already have enough context to drift;
 - multi-worker work using subagents, scripts, independent agent CLIs, schedulers, or humans;
 - work where evidence, process state, errors, and final conclusions should stay separate;
 - anything the user may later want to resume.
 
-Skip full LLL for simple Q&A, tiny edits, or tasks that fit safely in a few tool calls. When in doubt, use LLL Lite: a small workdir, `mission.md`, maybe `notes.md`, maybe one root report, and no heavy runner.
+Skip full LLL for simple Q&A, tiny edits, or tasks that fit safely in a few tool calls. When in doubt, use LLL Lite: a small workdir, `mission.md`, maybe `notes.md`, maybe one root deliverable, and no heavy runner. When context is already large, externalize objective, constraints, decisions, current status, and validation criteria before continuing.
 
 ## Default workdir
 

@@ -273,13 +273,13 @@ status: initialized
 - `internal/traceability.jsonl`: append-only claim/source/change trace entries.
 
 ## Execution policy
-- Keep supervisor context small.
+- Keep supervisor context small; use the workdir as the external task contract, not the chat transcript.
 - Workers write detailed outputs under `internal/agents/<task-id>/`.
 - Raw inputs, cloned repos, long logs, validation, handoff, recovery state, traceability, and error logs stay under `internal/`.
 - Human-facing deliverables live at the workdir root beside `mission.md`; name them from the task/content rather than using numeric prefixes or generic report titles.
 - Do not create `output/`, `00-index.md`, or standalone next-step files for new workdirs.
 - Human-facing output body text follows the hidden default: the user-specified output language, or the current interaction language if none is specified. Do not add language metadata labels merely to announce the default; record language only when it is an explicit task constraint. Keep filenames, JSON keys, commands, API names, and code identifiers in English when useful.
-- Record state changes in `mission.md`, `internal/tasks.jsonl`, `internal/runs.jsonl`, and `internal/recovery-state.md`.
+- Record state changes in `mission.md`, `internal/tasks.jsonl`, `internal/runs.jsonl`, and `internal/recovery-state.md`. If context is large or compaction is likely, refresh objective, constraints, decisions, current status, next action, and validation criteria in files before continuing.
 - Append traceability and error entries as JSONL objects with local-timezone ISO-8601/RFC3339 timestamps; do not reread the whole log just to append.
 - Treat `internal/runs.jsonl`, `internal/error-report.jsonl`, `internal/traceability.jsonl`, `internal/logs/*.log`, and `internal/agents/<task-id>/log.txt` as append-only; read tails or task/time slices on resume instead of full logs unless needed.
 - Use Markdown links for stable references: relative links for files inside this workdir, URLs/absolute paths for stable external resources, and plain text for temporary external files whose location may move.
@@ -291,7 +291,7 @@ status: initialized
 3. Inspect `internal/tasks.jsonl` status counts.
 4. Read relevant `internal/agents/<task-id>/handoff.md` files.
 5. Read top-level task-specific deliverables; inspect JSONL audit tails only as needed.
-6. Continue from the latest safe checkpoint.
+6. Recover from files rather than trusting prior chat context; continue from the latest safe checkpoint.
 """
     existing_core = [
         name for name in [
@@ -342,7 +342,7 @@ next_supervisor_action: add or run tasks
 2. Validate [internal/tasks.jsonl](tasks.jsonl) and [internal/runs.jsonl](runs.jsonl).
 3. Read [internal/agent-registry.md](agent-registry.md) and relevant worker handoffs.
 4. Read top-level task-specific deliverables when present; read `traceability.jsonl` / `error-report.jsonl` tails only as needed.
-5. Continue from last_safe_checkpoint.
+5. Recover from files rather than trusting prior chat context; continue from last_safe_checkpoint.
 """
     write_if_missing_or_force(wd / "internal/recovery-state.md", checkpoint_text, force=args.force)
     event_name = "workdir_reinitialized" if args.force else "workdir_created"
@@ -490,7 +490,7 @@ next_supervisor_action: {args.next_action}
 2. Validate [{task_rel}]({Path(task_rel).name if layout_kind(wd) == LAYOUT_CURRENT else task_rel}) and [{runs_rel}]({Path(runs_rel).name if layout_kind(wd) == LAYOUT_CURRENT else runs_rel}).
 3. Read [{registry_rel}]({Path(registry_rel).name if layout_kind(wd) == LAYOUT_CURRENT else registry_rel}) and relevant worker handoffs.
 4. Read top-level task-specific deliverables; inspect `traceability.jsonl` / `error-report.jsonl` tails only as needed.
-5. Continue from last_safe_checkpoint.
+5. Recover from files rather than trusting prior chat context; continue from last_safe_checkpoint.
 """
     atomic_write(recovery_path(wd), text)
     event(wd, task_id=None, event_name="checkpoint", status="ok", message=args.checkpoint, artifacts=[rel_to_workdir(wd, recovery_path(wd))])

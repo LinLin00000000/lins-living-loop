@@ -2,7 +2,7 @@
 name: lins-living-loop
 abbreviation: LLL
 description: Use this skill whenever the user asks for Lin's Living Loop, LLL, living loop, DOP, Deep Orchestration Protocol, 深度编排协议, 深度调研, 深入研究, 重型任务, 长时任务, 可恢复执行, 并行 agent, background agent, durable work, or complex multi-step work likely to cause context explosion, API timeouts, upstream instability, long-running execution, workspace reuse, or nontrivial validation. This skill turns chat into a lightweight supervisor, keeps the filesystem as the durable source of truth, chooses the simplest reliable carrier, puts human deliverables at the workdir root beside mission.md, keeps process/audit state under internal/, and treats skills/workflows as living procedural memory that can repair itself without becoming ceremonial.
-version: 1.1.0
+version: 1.1.1
 author: Lin
 license: MIT
 metadata:
@@ -29,10 +29,15 @@ Use LLL when:
 - the user explicitly says LLL, Lin's Living Loop, DOP, 深度调研, 重型任务, 长时任务, 深度编排, 可恢复, background agent, durable worker, or similar;
 - the task has multiple tracks such as research, coding, synthesis, review, or validation;
 - the task may outlive one turn, one request, or one stable API call;
+- the conversation/tool context is already large enough that hidden assumptions may drift (long transcript, many tool outputs, context compaction risk, or the user explicitly mentions context drift / 外部文件契约);
 - the result must be auditable, reproducible, resumable, or suitable for later continuation;
 - correctness depends on separate review or validation.
 
 Do not use full LLL for simple Q&A, quick searches, tiny edits, or tasks safely completed in a few tool calls. If unsure, choose the smallest honest mode that preserves the work without pretending to have more process than actually ran.
+
+Important: loading this skill is not the same as using LLL. For non-trivial skill/repo/workflow edits—especially changes touching several files, scripts, templates, docs, validation, or git commit/push—create at least an LLL Lite workdir (`mission.md` + compact notes/validation) rather than substituting a chat todo list for durable state.
+
+Context-drift rule: when the chat/tool context is large, long-running, or likely to be compacted, externalize the task contract before doing more substantive work. Update `mission.md`, `notes.md` or a root deliverable, `internal/recovery-state.md`, and validation/audit files so the filesystem—not the model's current attention—is the source of truth for objective, constraints, decisions, current status, and acceptance checks.
 
 ## Mode selection: structure mode vs carrier
 
@@ -47,7 +52,7 @@ Choose the structure mode first, then the lightest reliable carrier.
 
 Use **full LLL** when the work has multiple independent research objects, multiple execution tracks, long-running/background work, large evidence, or separate producer/validator roles.
 
-Use **LLL Lite** for single-track work where one agent can finish without context explosion. Lite is still file-backed, but it should stay visibly simple: `mission.md`, maybe `notes.md`, maybe one root deliverable, and optional `internal/validation-report.md`. Do not manufacture worker directories when there were no real workers.
+Use **LLL Lite** for single-track work where one agent can finish without context explosion. Lite is still file-backed, but it should stay visibly simple: `mission.md`, maybe `notes.md`, maybe one root deliverable, and optional `internal/validation-report.md`. If the current conversation is already large, Lite is the minimum drift guard even when the task has only one track. Do not manufacture worker directories when there were no real workers.
 
 ## Living loop
 
@@ -170,7 +175,7 @@ Guidelines:
 
 ## Mission maintenance
 
-`mission.md` is the current task contract, not a one-time kickoff note. Keep it compact and current.
+`mission.md` is the current task contract, not a one-time kickoff note. Keep it compact and current. Its job is to prevent context drift: a future supervisor should be able to recover the real objective, constraints, decisions, and acceptance checks from files without trusting the previous chat window.
 
 Maintain a visible fenced metadata block near the top:
 
@@ -203,7 +208,7 @@ Empty done directories are a workflow error: repair them before final delivery a
 
 ## Hard invariants
 
-1. Write/update `mission.md`, `internal/recovery-state.md`, the queue when used, and worker `task.md` before launching long work. In Lite, use compact `mission.md` plus `notes.md` or a root deliverable instead of a fake queue.
+1. Write/update `mission.md`, `internal/recovery-state.md`, the queue when used, and worker `task.md` before launching long work. If context is already large or compaction is likely, refresh the file-backed contract before continuing. In Lite, use compact `mission.md` plus `notes.md` or a root deliverable instead of a fake queue.
 2. Workers write detailed work only under `internal/agents/<task-id>/` unless explicitly assigned a shared root deliverable.
 3. Shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md`) have one writer: the supervisor or a real runner.
 4. Raw data, long logs, evidence, drafts, repositories, downloads, and debugging material go under `internal/`.
@@ -220,16 +225,17 @@ Empty done directories are a workflow error: repair them before final delivery a
 2. State important side effects briefly: file writes, network/API calls, background processes, code execution, Git changes, external services.
 3. If `SKILL.local.md` exists next to this file, read it for local/user-specific defaults; otherwise skip it silently.
 4. Create a fresh workdir by default, or resume only with a clear reuse signal.
-5. Decompose into orthogonal tasks with explicit outputs and acceptance checks.
-6. Choose structure mode: no LLL, LLL Lite, or full LLL.
-7. Choose the lightest honest carrier for each task: inline supervisor, subagent, script, background process, independent CLI, scheduler, runner, or board.
-8. Launch work; make workers write files and return short handoffs.
-9. Keep supervisor context small: read compact state and handoffs first; read raw artifacts only when needed.
-10. Synthesize into one or more root deliverables.
-11. Append traceability and error JSONL entries as needed.
-12. Validate independently.
-13. Ensure `mission.md`, root deliverables, `internal/traceability.jsonl`, `internal/error-report.jsonl`, and `internal/validation-report.md` are current before final delivery.
-14. Final reply points to deliverables and gives a short conclusion.
+5. If the current context is large, first externalize the contract: objective, constraints, decisions, current status, next action, and validation criteria.
+6. Decompose into orthogonal tasks with explicit outputs and acceptance checks.
+7. Choose structure mode: no LLL, LLL Lite, or full LLL.
+8. Choose the lightest honest carrier for each task: inline supervisor, subagent, script, background process, independent CLI, scheduler, runner, or board.
+9. Launch work; make workers write files and return short handoffs.
+10. Keep supervisor context small: read compact state and handoffs first; read raw artifacts only when needed.
+11. Synthesize into one or more root deliverables.
+12. Append traceability and error JSONL entries as needed.
+13. Validate independently.
+14. Ensure `mission.md`, root deliverables, `internal/traceability.jsonl`, `internal/error-report.jsonl`, and `internal/validation-report.md` are current before final delivery.
+15. Final reply points to deliverables and gives a short conclusion.
 
 ## Progress updates
 
@@ -341,6 +347,7 @@ Load only when needed:
 - `references/output-language-and-append-only.md`: output prose language and append-only JSONL discipline.
 - `references/product-surface-noise-and-reuse-output.md`: product-surface guardrails for hidden defaults, error report scope, and reuse deliverables.
 - `references/session-lessons-2026-06-15-compact-layout-jsonl.md`: concrete lesson for compact root deliverables, removing `output/`/index/next-step scaffolding, JSONL audit logs, and generator-surface migration checks.
+- `references/session-lessons-2026-06-15-lll-trigger-vs-execution.md`: concrete lesson that loading the LLL skill is not enough; non-trivial/large-context work should use at least LLL Lite and externalize the task contract before context drift.
 - `references/lins-living-loop-renaming.md`: naming and product-surface direction.
 - `templates/workdir/`, `templates/task/`, `templates/prompts/`: starter files and worker prompt patterns.
 - `scripts/lll.py`: optional stdlib file helper for init/add-task/status/set-status/event/checkpoint/structure validation. `scripts/dop.py` is a compatibility shim.
