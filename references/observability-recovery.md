@@ -35,7 +35,7 @@ Snapshots/current-state files may be rewritten to the current truth:
 - `internal/agents/<task-id>/status.json`
 - `internal/agents/<task-id>/handoff.md`
 - `internal/validation-report.md`
-- root deliverables such as `01-final-report.md`
+- root deliverables named from the task, such as `architecture-options.md` or `validation-summary.md`
 
 Append-only history files preserve audit order:
 - `internal/runs.jsonl`

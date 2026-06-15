@@ -6,8 +6,8 @@ last_updated: <local-timezone ISO-8601/RFC3339>
 ```
 
 ## Main human outputs
-- Root `01-*` deliverables beside `mission.md`, when created.
-- Current next steps belong inside the primary report or relevant deliverable.
+- Root task-specific deliverables beside `mission.md`, when created.
+- Current next steps belong inside the primary deliverable or relevant deliverable.
 
 ## Current state
 - <compact status>

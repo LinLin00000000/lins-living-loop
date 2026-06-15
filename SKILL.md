@@ -64,7 +64,7 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 | Heal | Append workflow/runtime abnormalities and repairs to `internal/error-report.jsonl` |
 | Validate | Write `internal/validation-report.md` |
 | Hand off | Refresh `internal/handoff.md` and `internal/recovery-state.md` |
-| Grow or Close | Put current next steps inside the primary report or relevant deliverable |
+| Grow or Close | Put current next steps inside the primary deliverable or relevant deliverable |
 
 ## Default new workdir; reuse only with a clear signal
 
@@ -77,7 +77,7 @@ When reuse is chosen, read the compact current state first:
 2. `internal/recovery-state.md`
 3. `internal/tasks.jsonl` and `internal/agent-registry.md`
 4. relevant `internal/agents/<task-id>/status.json` and `handoff.md`
-5. top-level deliverables such as `01-*.md`
+5. top-level task-specific deliverables
 6. tails/slices of `internal/traceability.jsonl`, `internal/error-report.jsonl`, and logs only as needed
 
 Classify the new request as extension, correction, workflow addendum, new evidence, validation follow-up, or mission change. Update `mission.md`, append JSONL audit entries, and update/rewrite the relevant root deliverable. Create a new workdir when the mission changed enough that old evidence would contaminate the new task.
@@ -101,8 +101,8 @@ Canonical current layout:
 ```text
 <lll-workdir>/
   mission.md                    # current task contract
-  01-<deliverable>.md           # optional primary human-facing deliverable
-  02-<deliverable>.md           # optional additional deliverable when justified
+  <task-specific-name>.md        # optional primary human-facing deliverable
+  <another-topic>.md             # optional additional deliverable when justified
   notes.md                      # optional Lite notes / inline supervisor notes
   internal/                     # process, audit, validation, worker state
     tasks.jsonl                 # durable queue, when full LLL or runner state is needed
@@ -134,16 +134,14 @@ Do not create these for new workdirs:
 
 ## Human deliverables
 
-Use root Markdown deliverables with two-digit prefixes only when ordering helps:
-- `01-final-report.md`, `01-summary.md`, `01-design.md`, etc. for the primary deliverable;
-- `02-*`, `03-*` for independently readable follow-up analyses, decisions, evidence packets, task results, or phase conclusions.
+Use root Markdown deliverables named from the task/content, not numeric prefixes or generic report titles. Examples: `architecture-options.md`, `validation-summary.md`, `source-notes.md`, `implementation-plan.md`. Create additional clearly named files for independently readable follow-up analyses, decisions, evidence packets, task results, or phase conclusions.
 
 The agent should decide the number of files from content shape:
 - merge into one Markdown file when the theme is coherent and the result remains readable;
 - split when there are multiple independent themes, large sections, separate audiences, or files that will be reused independently;
 - do not create files merely to satisfy process ceremony.
 
-Next steps belong as a section inside the primary report or the relevant deliverable. If there are no meaningful next steps, say so there or omit the section.
+Next steps belong as a section inside the primary deliverable or the relevant deliverable. If there are no meaningful next steps, say so there or omit the section.
 
 Human-facing prose follows the user's explicitly requested output language; if none is specified, use the current interaction language. Treat this as a hidden default, not metadata. Keep filenames, JSON keys, commands, API names, code identifiers, and stable external proper nouns in English when useful.
 
@@ -235,7 +233,7 @@ Empty done directories are a workflow error: repair them before final delivery a
 
 ## Progress updates
 
-For long-running, multi-stage, background, or multi-worker LLL tasks, provide brief progress updates distinct from final reports.
+For long-running, multi-stage, background, or multi-worker LLL tasks, provide brief progress updates distinct from final responses.
 
 Default shape:
 
@@ -262,7 +260,7 @@ Do not default to LangGraph, Temporal, Celery, Kanban, a database, or a daemon. 
 
 ## Synthesis and validation
 
-Use a synthesis worker when there are multiple substantive outputs, conflicts, or a final report/decision. Synthesis reads mission, registry, worker handoffs, and selected artifacts; it writes root deliverables and JSONL audit entries.
+Use a synthesis worker when there are multiple substantive outputs, conflicts, or a final synthesis/decision. Synthesis reads mission, registry, worker handoffs, and selected artifacts; it writes root deliverables and JSONL audit entries.
 
 Every nontrivial LLL task needs an independent validation pass by someone other than the producer of the final artifact.
 
@@ -320,7 +318,7 @@ Match the user's language. Keep the chat response short unless the user asked fo
 
 工作目录：<path>
 主要产出：
-- <01-final-report.md or primary root deliverable>
+- <primary root deliverable, named from the task>
 - <internal/error-report.jsonl>
 - <internal/traceability.jsonl>
 - <internal/validation-report.md>
@@ -342,6 +340,7 @@ Load only when needed:
 - `references/workdir-ux-migration.md`: checklist for changing LLL workdir layout, templates, helper scripts, and legacy compatibility together.
 - `references/output-language-and-append-only.md`: output prose language and append-only JSONL discipline.
 - `references/product-surface-noise-and-reuse-output.md`: product-surface guardrails for hidden defaults, error report scope, and reuse deliverables.
+- `references/session-lessons-2026-06-15-compact-layout-jsonl.md`: concrete lesson for compact root deliverables, removing `output/`/index/next-step scaffolding, JSONL audit logs, and generator-surface migration checks.
 - `references/lins-living-loop-renaming.md`: naming and product-surface direction.
 - `templates/workdir/`, `templates/task/`, `templates/prompts/`: starter files and worker prompt patterns.
 - `scripts/lll.py`: optional stdlib file helper for init/add-task/status/set-status/event/checkpoint/structure validation. `scripts/dop.py` is a compatibility shim.

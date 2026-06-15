@@ -23,7 +23,7 @@ Use the helper for LLL Lite and manual supervision. Add an actual runner only wh
 New LLL workdirs use the current compact layout: root `mission.md`, root human-facing deliverables, and process/agent/audit state under `internal/`.
 
 - `mission.md`: current task contract
-- `01-<deliverable>.md`, `02-<deliverable>.md`: optional root human-facing outputs as needed
+- `<task-specific-name>.md`, `<another-topic>.md`: optional root human-facing outputs named from the task as needed
 - `notes.md`: optional Lite working notes
 - `internal/tasks.jsonl`: current queue; safe to rewrite atomically
 - `internal/runs.jsonl`: append-only event history

@@ -39,8 +39,8 @@ Canonical layout:
 ```text
 <lll-workdir>/
   mission.md
-  01-<deliverable>.md        # optional human-facing deliverable beside mission.md
-  02-<deliverable>.md        # optional split when content/themes justify it
+  <task-specific-name>.md     # optional human-facing deliverable named from the task
+  <another-topic>.md          # optional split when content/themes justify it
   notes.md                   # optional Lite notes
   internal/
     tasks.jsonl
@@ -61,7 +61,7 @@ Canonical layout:
       artifacts/
 ```
 
-New workdirs no longer create `output/`, `00-index.md`, or standalone `99-next-steps.md` files. Human-readable deliverables live directly at the workdir root; next steps live inside the primary report or relevant deliverable; traceability and error records are JSONL files under `internal/` for cheap append and validation.
+New workdirs no longer create `output/`, `00-index.md`, or standalone `99-next-steps.md` files. Human-readable deliverables live directly at the workdir root; next steps live inside the primary deliverable or relevant deliverable; traceability and error records are JSONL files under `internal/` for cheap append and validation.
 
 ## The loop
 
@@ -78,7 +78,7 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 | Heal | Append to `internal/error-report.jsonl` |
 | Validate | Write `internal/validation-report.md` |
 | Hand off | Refresh `internal/handoff.md` and `internal/recovery-state.md` |
-| Grow or Close | Put current next steps inside the primary report/relevant deliverable |
+| Grow or Close | Put current next steps inside the primary deliverable/relevant deliverable |
 
 ## Name and slug
 

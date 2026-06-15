@@ -22,8 +22,8 @@ status: pending
 - Read `mission.md`, this task file, and listed inputs before starting.
 - Treat the workdir as the source of truth; chat is only a short handoff.
 - Write detailed work, logs, evidence, drafts, and outputs under this task directory unless explicitly assigned a shared root deliverable.
-- Human-facing deliverables usually live at the workdir root as `01-*`, `02-*`, etc.; merge when one file preserves thematic completeness, split only when content or themes justify it.
-- Current next steps belong inside the primary report/relevant deliverable, not in a standalone next-step file.
+- Human-facing deliverables live at the workdir root with task-specific filenames; merge when one file preserves thematic completeness, split only when content or themes justify it.
+- Current next steps belong inside the primary deliverable/relevant deliverable, not in a standalone next-step file.
 - Write an artifact skeleton early, then fill it incrementally for long reading/research tasks.
 - Do not edit shared state files unless explicitly granted ownership through a lock or runner API.
 - Keep claims traceable to artifact paths, sources, commands, or validation notes; append JSONL trace entries only when assigned/authorized.

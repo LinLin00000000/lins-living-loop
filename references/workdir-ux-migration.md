@@ -6,11 +6,11 @@ Use this reference when changing LLL's own workdir layout, templates, helper scr
 
 A LLL workdir should be easy for two readers at once:
 
-- Humans start from `mission.md` plus root deliverables such as `01-final-report.md`.
+- Humans start from `mission.md` plus root deliverables named from the task, such as `architecture-options.md` or `validation-summary.md`.
 - Agents, runners, and supervisors use `internal/` for queues, logs, registry, recovery, validation, task state, raw inputs, worker artifacts, traceability, and error records.
 - Root stays shallow but useful: `mission.md`, a small number of human deliverables, optional `notes.md`, and `internal/`.
 
-Do not make humans hunt through workflow machinery to find conclusions. Do not make agents infer state from final reports. Do not recreate `output/`/index layers unless the user explicitly asks for an old layout.
+Do not make humans hunt through workflow machinery to find conclusions. Do not make agents infer state from final responses. Do not recreate `output/`/index layers unless the user explicitly asks for an old layout.
 
 ## Patch checklist
 
@@ -33,8 +33,8 @@ Verify that generated and templated Markdown uses stable links:
 - Relative links for files generated inside the same LLL workdir.
 - URLs or absolute paths for stable external resources.
 - Plain text for temporary external/user-mentioned files likely to move.
-- Root `NN-*.md` files for human-facing deliverables when ordering helps.
-- Next steps live inside the primary report or relevant deliverable.
+- Root Markdown files with task-specific names for human-facing deliverables.
+- Next steps live inside the primary deliverable or relevant deliverable.
 - `internal/error-report.jsonl` and `internal/traceability.jsonl` are append-only JSONL audit files.
 - Worker task files link to `mission.md`, `handoff.md`, `artifacts/`, `log.txt`, shared state, and assigned human-facing output areas where paths are stable.
 
@@ -42,8 +42,8 @@ Verify that generated and templated Markdown uses stable links:
 
 Use the mixed strategy for human deliverables:
 
-- Update the current root `01-*` primary deliverable for same-scope corrections or small supplements.
-- Create root `02-*`, `03-*`, etc. for independent follow-up analysis, design decision, new task result, or phase conclusion.
+- Update the current task-specific primary deliverable for same-scope corrections or small supplements.
+- Create another clearly named root deliverable for independent follow-up analysis, design decision, new task result, or phase conclusion.
 - Do not maintain a separate index for small file sets; a few root files should be readable directly from the directory listing.
 - Keep workflow/runtime errors in `internal/error-report.jsonl`; user requirements and decisions belong in mission addenda, traceability, or root deliverables.
 

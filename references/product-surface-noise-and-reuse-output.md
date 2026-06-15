@@ -25,8 +25,8 @@ Do **not** record normal user requirements, new goals, scope additions, or produ
 
 Do not create a new file for every chat turn.
 
-- Update the current root `01-*` primary deliverable for same-scope corrections, clarifications, style cleanup, small supplements, or rewrites.
-- Create root `02-*`, `03-*`, etc. when the new work is an independently readable analysis, decision, phase result, or substantial add-on.
+- Update the current task-specific primary deliverable for same-scope corrections, clarifications, style cleanup, small supplements, or rewrites.
+- Create another clearly named root deliverable when the new work is an independently readable analysis, decision, phase result, or substantial add-on.
 - Do not keep a separate index for small file sets; root filenames and the final chat response should make the entry point obvious.
-- Do not force all history into `01-final-report.md`; it should carry the current main conclusion, not become a changelog.
-- Current next steps belong inside the primary report or relevant deliverable.
+- Do not force all history into one fixed generic report file; the primary deliverable should carry the current main conclusion, not become a changelog.
+- Current next steps belong inside the primary deliverable or relevant deliverable.

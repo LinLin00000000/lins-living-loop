@@ -7,7 +7,7 @@ protocol easy: init, add-task, status, set-status, event, checkpoint, validate.
 New workdirs use the compact current layout:
   mission.md + top-level human deliverables + internal/
 
-Human-facing artifacts such as `01-final-report.md` live beside `mission.md`.
+Human-facing artifacts named from the task, such as `architecture-options.md` or `validation-summary.md`, live beside `mission.md`.
 Process state, worker state, validation, traceability, and error logs live under
 `internal/`. The old `output/` navigation layer is intentionally not generated.
 """
@@ -254,7 +254,7 @@ status: initialized
 
 ## Success criteria
 - <observable criterion>
-- top-level `01-<final-file>.md` or another mission-specific deliverable exists when needed
+- a top-level mission-specific deliverable exists when needed, named from the task rather than a fixed deliverable template
 - `internal/validation-report.md` is PASS or PASS_WITH_NOTES before final delivery
 
 ## Non-goals
@@ -267,8 +267,8 @@ status: initialized
 - External services/accounts: <confirm if needed>
 
 ## Expected outputs
-- Top-level human-facing deliverable(s), usually `01-<file>.md`; merge into one Markdown file when that preserves thematic completeness, or split into `02-*`, `03-*` when the content has multiple independent themes or becomes too large.
-- Next steps are a section inside the primary report or the relevant deliverable, not a separate `Next Step.md` / `99-next-steps.md` file.
+- Top-level human-facing deliverable(s) with task-specific names; merge into one Markdown file when that preserves thematic completeness, or split into multiple clearly named files when the content has multiple independent themes or becomes too large.
+- Next steps are a section inside the primary deliverable or the relevant deliverable, not a separate `Next Step.md` / `99-next-steps.md` file.
 - `internal/error-report.jsonl`: append-only workflow/runtime abnormalities, repairs, and self-maintenance events.
 - `internal/traceability.jsonl`: append-only claim/source/change trace entries.
 
@@ -276,7 +276,7 @@ status: initialized
 - Keep supervisor context small.
 - Workers write detailed outputs under `internal/agents/<task-id>/`.
 - Raw inputs, cloned repos, long logs, validation, handoff, recovery state, traceability, and error logs stay under `internal/`.
-- Human-facing deliverables live at the workdir root beside `mission.md`; use two-digit numeric prefixes only when ordering helps.
+- Human-facing deliverables live at the workdir root beside `mission.md`; name them from the task/content rather than using numeric prefixes or generic report titles.
 - Do not create `output/`, `00-index.md`, or standalone next-step files for new workdirs.
 - Human-facing output body text follows the hidden default: the user-specified output language, or the current interaction language if none is specified. Do not add language metadata labels merely to announce the default; record language only when it is an explicit task constraint. Keep filenames, JSON keys, commands, API names, and code identifiers in English when useful.
 - Record state changes in `mission.md`, `internal/tasks.jsonl`, `internal/runs.jsonl`, and `internal/recovery-state.md`.
@@ -290,7 +290,7 @@ status: initialized
 2. Read `internal/recovery-state.md`.
 3. Inspect `internal/tasks.jsonl` status counts.
 4. Read relevant `internal/agents/<task-id>/handoff.md` files.
-5. Read top-level deliverables such as `01-*.md`; inspect JSONL audit tails only as needed.
+5. Read top-level task-specific deliverables; inspect JSONL audit tails only as needed.
 6. Continue from the latest safe checkpoint.
 """
     existing_core = [
@@ -309,9 +309,9 @@ status: initialized
     init_files = {
         "internal/tasks.jsonl": "",
         "internal/runs.jsonl": "",
-        "internal/agent-registry.md": "# Agent / Worker Registry\n\n| id | role | carrier | preset | status | task(s) | output | notes |\n|---|---|---|---|---|---|---|---|\n| supervisor | decomposes, routes, validates, reports | current | default | active | all | root `01-*` deliverables as needed | owns queue and final decisions |\n",
-        "internal/validation-report.md": "# Validation Report\n\n```text\nverdict: pending\n```\n\n## Structure checks\n\n| check | status | evidence |\n|---|---|---|\n| required current-layout files exist | pending | [mission](../mission.md), [internal queue](tasks.jsonl), [traceability](traceability.jsonl), [error report](error-report.jsonl) |\n| obsolete output layer absent | pending | no `output/`, `00-index.md`, or standalone next-step file generated |\n| human-facing deliverables are top-level | pending | primary `../01-*` deliverable(s), when required by mission |\n| human-facing output language is correct | pending | primary deliverable body follows requested/current interaction language |\n\n## Mission criteria check\n\n| criterion | status | evidence |\n|---|---|---|\n| <criterion> | pending | <path/link> |\n",
-        "internal/handoff.md": "# Internal LLL Handoff\n\n```text\nstatus: pending\n```\n\n## Main human outputs\n- Top-level `01-*` deliverables beside `mission.md`, when created.\n- Current next steps belong inside the primary report/relevant deliverable.\n",
+        "internal/agent-registry.md": "# Agent / Worker Registry\n\n| id | role | carrier | preset | status | task(s) | output | notes |\n|---|---|---|---|---|---|---|---|\n| supervisor | decomposes, routes, validates, reports | current | default | active | all | root task-specific deliverables as needed | owns queue and final decisions |\n",
+        "internal/validation-report.md": "# Validation Report\n\n```text\nverdict: pending\n```\n\n## Structure checks\n\n| check | status | evidence |\n|---|---|---|\n| required current-layout files exist | pending | [mission](../mission.md), [internal queue](tasks.jsonl), [traceability](traceability.jsonl), [error report](error-report.jsonl) |\n| obsolete output layer absent | pending | no `output/`, `00-index.md`, or standalone next-step file generated |\n| human-facing deliverables are top-level | pending | primary task-specific root deliverable(s), when required by mission |\n| human-facing output language is correct | pending | primary deliverable body follows requested/current interaction language |\n\n## Mission criteria check\n\n| criterion | status | evidence |\n|---|---|---|\n| <criterion> | pending | <path/link> |\n",
+        "internal/handoff.md": "# Internal LLL Handoff\n\n```text\nstatus: pending\n```\n\n## Main human outputs\n- Top-level task-specific deliverables beside `mission.md`, when created.\n- Current next steps belong inside the primary deliverable/relevant deliverable.\n",
         "internal/logs/supervisor.log": f"{now()} initialized LLL workdir {wd}\n",
         "internal/logs/runner.log": "",
     }
@@ -341,7 +341,7 @@ next_supervisor_action: add or run tasks
 1. Read [mission.md](../mission.md).
 2. Validate [internal/tasks.jsonl](tasks.jsonl) and [internal/runs.jsonl](runs.jsonl).
 3. Read [internal/agent-registry.md](agent-registry.md) and relevant worker handoffs.
-4. Read top-level `../01-*` deliverables when present; read `traceability.jsonl` / `error-report.jsonl` tails only as needed.
+4. Read top-level task-specific deliverables when present; read `traceability.jsonl` / `error-report.jsonl` tails only as needed.
 5. Continue from last_safe_checkpoint.
 """
     write_if_missing_or_force(wd / "internal/recovery-state.md", checkpoint_text, force=args.force)
@@ -403,7 +403,7 @@ def cmd_add_task(args: argparse.Namespace) -> None:
             input_lines.append(f"- {mission_link}\n")
         else:
             input_lines.append(f"- {item}\n")
-    atomic_write(task_dir / "task.md", f"# LLL Worker Task\n\n```text\ntask_id: {args.id}\ncarrier: {args.carrier}\npreset: {args.preset}\nstatus: pending\n```\n\n## Objective\n{args.goal}\n\n## Inputs\n" + "".join(input_lines) + "\n## Required outputs\n- [handoff.md](handoff.md)\n- [artifacts/](artifacts/) as needed\n\n## Compact LLL contract\n- Read " + mission_link + ", this task file, and listed inputs before starting.\n- Treat the workdir as the source of truth; chat is only a short handoff.\n- Write detailed work, logs, evidence, drafts, and outputs under this task directory unless explicitly assigned a shared human-facing deliverable at " + root_output_link + ".\n- Human-facing deliverables should usually be top-level `01-*`, `02-*`, etc.; merge when one file preserves thematic completeness, split only when content or themes justify it.\n- Current next steps belong inside the primary report/relevant deliverable, not in a standalone next-step file.\n- Write an artifact skeleton early, then fill it incrementally for long reading/research tasks.\n- Do not edit shared state files (" + shared_files + ") unless explicitly granted ownership through a lock or runner API.\n- Keep claims traceable to artifact paths, sources, commands, or validation notes; append JSONL trace entries only when assigned/authorized.\n- If blocked, record what was tried and propose the smallest fallback.\n\n## Logging\nAppend commands, sources, decisions, failures, and retries to [log.txt](log.txt).\n\n## Handoff contract\nstatus, outputs, 1-3 key results, risks/blockers, recommended next step\n")
+    atomic_write(task_dir / "task.md", f"# LLL Worker Task\n\n```text\ntask_id: {args.id}\ncarrier: {args.carrier}\npreset: {args.preset}\nstatus: pending\n```\n\n## Objective\n{args.goal}\n\n## Inputs\n" + "".join(input_lines) + "\n## Required outputs\n- [handoff.md](handoff.md)\n- [artifacts/](artifacts/) as needed\n\n## Compact LLL contract\n- Read " + mission_link + ", this task file, and listed inputs before starting.\n- Treat the workdir as the source of truth; chat is only a short handoff.\n- Write detailed work, logs, evidence, drafts, and outputs under this task directory unless explicitly assigned a shared human-facing deliverable at " + root_output_link + ".\n- Human-facing deliverables should use task-specific filenames at the workdir root; merge when one file preserves thematic completeness, split into clearly named files only when content or themes justify it.\n- Current next steps belong inside the primary deliverable/relevant deliverable, not in a standalone next-step file.\n- Write an artifact skeleton early, then fill it incrementally for long reading/research tasks.\n- Do not edit shared state files (" + shared_files + ") unless explicitly granted ownership through a lock or runner API.\n- Keep claims traceable to artifact paths, sources, commands, or validation notes; append JSONL trace entries only when assigned/authorized.\n- If blocked, record what was tried and propose the smallest fallback.\n\n## Logging\nAppend commands, sources, decisions, failures, and retries to [log.txt](log.txt).\n\n## Handoff contract\nstatus, outputs, 1-3 key results, risks/blockers, recommended next step\n")
     atomic_write(task_dir / "status.json", json.dumps({"task_id": args.id, "status": "pending", "current_step": "not started", "attempts": 0, "last_checkpoint": None, "last_error": None, "outputs": [], "updated_at": now()}, ensure_ascii=False, indent=2) + "\n")
     atomic_write(task_dir / "log.txt", f"{now()} task queued\n")
     atomic_write(task_dir / "handoff.md", f"# Worker Handoff\n\n```text\nstatus: pending\ntask_id: {args.id}\n```\n")
@@ -489,7 +489,7 @@ next_supervisor_action: {args.next_action}
 1. Read [mission.md](../mission.md) if this file is under internal/, otherwise `mission.md` in the workdir root.
 2. Validate [{task_rel}]({Path(task_rel).name if layout_kind(wd) == LAYOUT_CURRENT else task_rel}) and [{runs_rel}]({Path(runs_rel).name if layout_kind(wd) == LAYOUT_CURRENT else runs_rel}).
 3. Read [{registry_rel}]({Path(registry_rel).name if layout_kind(wd) == LAYOUT_CURRENT else registry_rel}) and relevant worker handoffs.
-4. Read top-level deliverables such as `01-*`; inspect `traceability.jsonl` / `error-report.jsonl` tails only as needed.
+4. Read top-level task-specific deliverables; inspect `traceability.jsonl` / `error-report.jsonl` tails only as needed.
 5. Continue from last_safe_checkpoint.
 """
     atomic_write(recovery_path(wd), text)

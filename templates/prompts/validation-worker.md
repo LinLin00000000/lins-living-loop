@@ -6,7 +6,7 @@ Read:
 - <lll-workdir>/internal/tasks.jsonl when present
 - <lll-workdir>/internal/agent-registry.md when present
 - relevant worker handoffs before raw artifacts
-- root deliverables such as <lll-workdir>/01-*.md
+- root deliverables named from the task, e.g. `<lll-workdir>/architecture-options.md`
 - tails/slices of <lll-workdir>/internal/traceability.jsonl and <lll-workdir>/internal/error-report.jsonl as needed
 
 Write:
@@ -21,7 +21,7 @@ Structure checks:
 - Task ids/statuses/dependencies are valid.
 - Real task directories contain task.md, status.json, log.txt, handoff.md, and artifacts/.
 - New workdirs do not contain obsolete `output/`, `00-index.md`, or standalone next-step files.
-- Human-facing deliverables are root files such as `01-*`, when required by mission.
+- Human-facing deliverables are task-specific root files, when required by mission.
 
 Mission checks:
 - Success criteria are satisfied.
@@ -29,7 +29,7 @@ Mission checks:
 - Important claims trace to sources, commands, artifacts, or explicit assumptions.
 - Failed/blocked tasks were handled.
 - Code/tests/builds/checks ran or failures are documented.
-- Current next steps are present in the primary report/relevant deliverable when useful.
+- Current next steps are present in the primary deliverable/relevant deliverable when useful.
 
 Verdict:
 - PASS, PASS_WITH_NOTES, or FAIL.

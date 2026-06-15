@@ -12,7 +12,7 @@ status: initialized
 
 ## Success criteria
 - <Observable criterion>
-- <Required root deliverable, e.g. `01-final-report.md`, when needed>
+- <Required root deliverable, e.g. `architecture-options.md` or `validation-summary.md`, when needed>
 - <Validation expectation under `internal/validation-report.md`>
 
 ## Non-goals
@@ -29,8 +29,8 @@ status: initialized
 - <path/source>: <purpose; raw/reference materials should be copied or summarized under `internal/inputs/` when durable>
 
 ## Expected outputs
-- Root human-facing deliverable(s), usually `01-<file>.md`; merge when one file preserves thematic completeness, split when there are multiple independent themes or the file becomes too large.
-- Current next steps are a section inside the primary report or relevant deliverable, not a standalone Next Steps file.
+- Root human-facing deliverable(s) with task-specific filenames; merge when one file preserves thematic completeness, split when there are multiple independent themes or the file becomes too large.
+- Current next steps are a section inside the primary deliverable or relevant deliverable, not a standalone Next Steps file.
 - `internal/error-report.jsonl`: append-only workflow/runtime abnormalities, repairs, and self-maintenance events.
 - `internal/traceability.jsonl`: append-only claim/source/change trace entries.
 
@@ -60,5 +60,5 @@ Append short timestamped entries when the user changes scope, constraints, outpu
 2. Read [internal/recovery-state.md](internal/recovery-state.md).
 3. Inspect [internal/tasks.jsonl](internal/tasks.jsonl) status counts when present.
 4. Read relevant [internal/agents/<task-id>/handoff.md](internal/agents/) files when workers exist.
-5. Read root deliverables such as `01-*.md`; inspect JSONL audit tails only as needed.
+5. Read root task-specific deliverables; inspect JSONL audit tails only as needed.
 6. Continue from the latest safe checkpoint.

@@ -11,7 +11,7 @@ validator: <agent/tool>
 |---|---|---|
 | required current-layout files exist | pending | [mission](../mission.md), [internal queue](tasks.jsonl), [traceability](traceability.jsonl), [error report](error-report.jsonl) |
 | obsolete output layer absent | pending | no `output/`, `00-index.md`, or standalone next-step file generated for new workdirs |
-| human-facing deliverables are top-level | pending | primary `../01-*` deliverable(s), when required by mission |
+| human-facing deliverables are top-level | pending | primary task-specific root deliverable(s), when required by mission |
 | JSONL audit logs parse | pending | [traceability](traceability.jsonl), [error report](error-report.jsonl), [runs](runs.jsonl) |
 | human-facing output language is correct | pending | primary deliverable body follows requested/current interaction language |
 

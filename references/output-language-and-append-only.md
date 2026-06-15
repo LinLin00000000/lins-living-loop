@@ -4,7 +4,7 @@ Human-facing root deliverables are the user's reading surface. They should not s
 
 ## Output language rule
 
-- Human-facing prose in root deliverables such as `01-final-report.md` follows the user's explicitly requested output language.
+- Human-facing prose in root deliverables named from the task, such as `architecture-options.md` or `validation-summary.md` follows the user's explicitly requested output language.
 - If the user did not specify an output language, use the current interaction language.
 - Treat this as a hidden default. Do not add `language_rule`, `interaction_language`, or `output_language` markers to `mission.md` or deliverables merely to announce it.
 - Record language only when it is a real task constraint: non-default output language, bilingual deliverables, translation work, or cross-language handoff risk. Put it in normal constraints/expected outputs/addenda, not in mandatory metadata fields.
@@ -15,10 +15,10 @@ Human-facing root deliverables are the user's reading surface. They should not s
 
 On workspace reuse, choose the output file by semantic boundary:
 
-- Update the primary root `01-*` deliverable for corrections, clarifications, style cleanup, small supplements, or rewrites of the same deliverable.
-- Create root `02-*`, `03-*`, etc. for independently readable analyses, decisions, new evidence packets, new task results, or new phase conclusions.
-- Put current next steps inside the primary report or relevant deliverable.
-- Keep audit history in `internal/traceability.jsonl`; keep workflow/runtime failures in `internal/error-report.jsonl`; do not overload the final report as a transcript.
+- Update the primary root task-specific root deliverables deliverable for corrections, clarifications, style cleanup, small supplements, or rewrites of the same deliverable.
+- Create root additional clearly named deliverables, etc. for independently readable analyses, decisions, new evidence packets, new task results, or new phase conclusions.
+- Put current next steps inside the primary deliverable or relevant deliverable.
+- Keep audit history in `internal/traceability.jsonl`; keep workflow/runtime failures in `internal/error-report.jsonl`; do not overload the primary deliverable as a transcript.
 
 ## Append-only timestamp rule
 
