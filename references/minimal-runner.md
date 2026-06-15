@@ -4,7 +4,7 @@ LLL does not need a heavy orchestrator by default. A useful runner can stay tiny
 
 ## File helper vs actual runner
 
-`scripts/lll.py` is the main file helper (`scripts/lll.py` / compatibility `scripts/dop.py` remains a compatibility shim), not a durable runner, daemon, dispatcher, or smart agent. It makes the file protocol easy:
+`scripts/lll.py` is the main file helper; `scripts/dop.py` remains only as an old-name compatibility shim. The helper does not run agents. It makes the file protocol easy:
 
 - initialize a workdir
 - add tasks
@@ -16,27 +16,27 @@ LLL does not need a heavy orchestrator by default. A useful runner can stay tiny
 
 An actual runner is a stronger component. It claims tasks, starts carriers, heartbeats, records process/job ids, completes/fails tasks, retries, reclaims stale leases, and enforces single-writer updates. Do not imply the helper provides that lifecycle unless those features are implemented.
 
-Use the helper for LLL-lite and manual supervision. Add an actual runner only when task count, retries, leases, or overlapping workers make manual state updates unreliable.
+Use the helper for LLL Lite and manual supervision. Add an actual runner only when task count, retries, leases, or overlapping workers make manual state updates unreliable.
 
 ## Durable files
 
-New LLL workdirs use the canonical v2 layout: root `mission.md`, process/agent state under `internal/`, and human-facing output under `output/`.
+New LLL workdirs use the current compact layout: root `mission.md`, root human-facing deliverables, and process/agent/audit state under `internal/`.
 
+- `mission.md`: current task contract
+- `01-<deliverable>.md`, `02-<deliverable>.md`: optional root human-facing outputs as needed
+- `notes.md`: optional Lite working notes
 - `internal/tasks.jsonl`: current queue; safe to rewrite atomically
 - `internal/runs.jsonl`: append-only event history
+- `internal/error-report.jsonl`: append-only workflow/runtime abnormality and repair records
+- `internal/traceability.jsonl`: append-only claim/source/change/evidence map
 - `internal/recovery-state.md`: compact resume instructions
 - `internal/handoff.md`: compact supervisor handoff for future recovery
 - `internal/validation-report.md`: validation verdict and evidence
 - `internal/inputs/`: raw/reference materials introduced during the run
 - `internal/agents/<task-id>/status.json`: per-task current state
 - `internal/agents/<task-id>/handoff.md`: worker handoff
-- `output/00-index.md`: required index of every file in output/
-- `output/90-error-report.md`: required append-only error/correction/self-maintenance report
-- `output/91-traceability.md`: required append-only claim/source/change trace map
-- `output/99-next-steps.md`: required mutable current next actions
-- `output/01-<deliverable>.md`: numbered primary human-facing outputs as needed
 
-Transitional workdirs may use `collab/` + `readable/` with root recovery/handoff/validation files. Older legacy workdirs may have `tasks.jsonl`, `runs.jsonl`, `agent-registry.md`, `agents/`, and `deliverables/` at the root. Resume them as-is, but create new workdirs with `internal/` and `output/`.
+New helper output intentionally does not create `output/`, `00-index.md`, or standalone next-step files. Transitional/legacy workdirs may still contain `collab/`, `readable/`, `deliverables/`, or root-level state; resume them as-is with loose detection rather than migrating or preserving redundant new-layout complexity.
 
 ## Task schema
 
@@ -83,21 +83,35 @@ Recommended fields:
 }
 ```
 
+## Error/trace JSONL schemas
+
+`internal/error-report.jsonl` example:
+
+```json
+{"ts":"<local-timezone ISO-8601>","type":"workflow_error","severity":"warning","what_happened":"...","evidence":["path-or-command"],"impact":"...","fix_or_fallback":"...","self_maintenance":"..."}
+```
+
+`internal/traceability.jsonl` example:
+
+```json
+{"ts":"<local-timezone ISO-8601>","type":"claim|source|change|validation","item":"...","evidence":["relative/path","https://example.com"],"status":"supported|assumption|validated|superseded","notes":"..."}
+```
+
 ## Simple helper lifecycle
 
-1. `init`: create v2 files and directories.
+1. `init`: create current-layout files and directories.
 2. `add-task`: create queue item and task directory.
 3. `status`: summarize queue counts and active/blocked tasks.
 4. `event`: append an event.
 5. `set-status`: update task state and per-task status file.
-6. `checkpoint`: rewrite the layout-specific `recovery-state.md` with latest safe point.
-7. `validate`: check required files, JSONL validity, safe task output paths, legal statuses, dependencies, per-task file presence, required output audit files, and output index coverage. It supports `--mode auto|full|lite`; `auto` stays conservative and treats any workdir with a layout-specific task queue as full validation, full mode keeps strict worker-tree checks, and lite mode accepts simple honest Lite workspaces without fake worker directories.
+6. `checkpoint`: rewrite `internal/recovery-state.md` with latest safe point.
+7. `validate`: check required files, JSONL validity, safe task output paths, legal statuses, dependencies, per-task file presence, and absence of obsolete current-layout output surface. It supports `--mode auto|full|lite`.
 
-`validate` is structure validation. It does not prove the mission is complete, claims are correct, tests passed, or deliverables are useful. Mission validation remains a separate independent LLL step.
+`validate` is structure validation. It does not prove the mission is complete, claims are correct, tests passed, or deliverables are useful. Mission validation remains separate.
 
 ## Lease and reclaim, only if needed
 
-For most LLL-lite work, leases are unnecessary. Add leases when multiple workers or long background jobs may overlap.
+For most LLL Lite work, leases are unnecessary. Add leases when multiple workers or long background jobs may overlap.
 
 A lease is just:
 
@@ -111,9 +125,9 @@ Reclaim only after checking the worker log/process when possible.
 
 Shared LLL state has one writer at a time.
 
-- In manual LLL-lite, the supervisor owns `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, and `internal/recovery-state.md`.
+- In manual LLL Lite, the supervisor owns `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, and `internal/recovery-state.md`.
 - In runner mode, the runner owns those shared files or exposes a narrow API/lock for updates.
-- Workers write only `internal/agents/<task-id>/` unless explicitly assigned a numbered shared human deliverable under `output/`.
+- Workers write only `internal/agents/<task-id>/` unless explicitly assigned a root human deliverable.
 
 When rewriting `internal/tasks.jsonl`:
 
@@ -126,21 +140,7 @@ This keeps recovery simple after crashes.
 
 ## What not to build early
 
-Do not start with:
-
-- database
-- queue server
-- event bus
-- custom agent protocol
-- distributed locks
-- complex daemon
-- GUI dashboard
-
-Add those only when plain files have become the bottleneck.
-
-## Included helper
-
-This skill includes `scripts/lll.py`, a small stdlib helper. `scripts/lll.py` / compatibility `scripts/dop.py` remains as an old-name compatibility shim with the lifecycle commands above. It is optional; agents can also manage the files directly.
+Do not start with a database, queue server, event bus, custom agent protocol, distributed locks, complex daemon, or GUI dashboard. Add those only when plain files have become the bottleneck.
 
 ## Helper quickstart
 
@@ -150,33 +150,30 @@ python3 scripts/lll.py add-task <lll-workdir> --id T001 --title "<short title>" 
 python3 scripts/lll.py add-task <lll-workdir> --id T002 --title "<dependent task>" --goal "<worker goal>" --depends-on T001
 python3 scripts/lll.py status <lll-workdir> --all
 python3 scripts/lll.py validate <lll-workdir>
-python3 scripts/lll.py validate <lll-workdir> --mode lite   # explicit Lite validation
-python3 scripts/lll.py validate <lll-workdir> --mode full   # strict worker-tree validation
+python3 scripts/lll.py validate <lll-workdir> --mode lite
+python3 scripts/lll.py validate <lll-workdir> --mode full
 ```
 
-The helper is intentionally conservative: it refuses to reinitialize an existing workdir unless `--force` is explicit, and task output paths must stay under `internal/agents/<task-id>/` for new v2 workdirs, `collab/agents/<task-id>/` for transitional v1 workdirs, or legacy `agents/<task-id>/` when resuming old root-layout workdirs.
+The helper refuses to reinitialize an existing workdir unless `--force` is explicit. Task output paths must stay under the layout-specific worker root, normally `internal/agents/<task-id>/` for current workdirs.
 
-`add-task --depends-on` is repeatable and also accepts comma-separated lists for convenience, for example `--depends-on T001 --depends-on T002` or `--depends-on T001,T002`. After using helper scripts to add tasks or dependencies, inspect `internal/tasks.jsonl` before launching workers so queue ids, dependencies, and output paths match the intended task graph.
+`add-task --depends-on` is repeatable and also accepts comma-separated lists.
 
 ## Strict structure validation checklist
 
 For higher confidence, validate at least:
 
-- required core files exist: `mission.md`, `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md`, `internal/handoff.md`, `internal/validation-report.md`;
-- `internal/tasks.jsonl` and `internal/runs.jsonl` parse as JSONL;
+- required core files exist: `mission.md`, `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md`, `internal/handoff.md`, `internal/validation-report.md`, `internal/error-report.jsonl`, `internal/traceability.jsonl`;
+- JSONL files parse;
 - task ids are unique and non-empty;
 - task statuses are one of `pending`, `ready`, `in_progress`, `blocked`, `done`, `failed`, `cancelled`;
 - dependencies point to existing task ids;
-- every task `out` is relative, cannot escape the workdir, and resolves under `internal/agents/<task-id>/` for v2, `collab/agents/<task-id>/` for v1, or legacy `agents/<task-id>/` for old workdirs;
-- every task directory has `task.md`, `status.json`, `log.txt`, `handoff.md`, and `artifacts/`;
+- every task `out` is relative, cannot escape the workdir, and resolves under `internal/agents/<task-id>/` for current workdirs;
+- every real task directory has `task.md`, `status.json`, `log.txt`, `handoff.md`, and `artifacts/`;
 - task-local `status.json` agrees with the queue where practical;
-- `internal/agent-registry.md` mentions every worker/task expected to exist;
-- `output/00-index.md` exists and mentions every file in `output/`;
-- `output/90-error-report.md`, `output/91-traceability.md`, and `output/99-next-steps.md` exist;
+- no obsolete `output/`, `00-index.md`, or standalone next-step file exists in a new/current workdir;
 - validation and internal handoff files exist before final delivery.
 
 Even strict structure validation is not mission validation. It only says the recovery surface is coherent enough to inspect.
-
 
 ## Append-only files and token-cost control
 
@@ -184,11 +181,11 @@ Append-only files are useful for auditability but dangerous for context cost if 
 
 Treat these as append-only by design:
 
-- `internal/runs.jsonl`: event stream
-- `internal/logs/supervisor.log` and `internal/logs/runner.log`: supervisor/runner logs
-- `internal/agents/<task-id>/log.txt`: task-local command/source/error log
-- optional `internal/**/events.jsonl`, `journal.md`, `history.md`: only if explicitly declared append-only
+- `internal/runs.jsonl`
+- `internal/error-report.jsonl`
+- `internal/traceability.jsonl`
+- `internal/logs/supervisor.log` and `internal/logs/runner.log`
+- `internal/agents/<task-id>/log.txt`
+- optional `internal/**/events.jsonl`, `journal.md`, `history.md` only if explicitly declared append-only
 
-Resume order should prefer compact state first: `mission.md`, `internal/recovery-state.md`, `internal/tasks.jsonl`, `internal/agent-registry.md`, task-local `status.json`, and `handoff.md`. Then read append-only files only by tail, by task id, or by entries since the last checkpoint. If a log becomes important but large, write or refresh a compact handoff/snapshot instead of making future agents ingest the whole history.
-
-Every append-only entry should include a local-timezone ISO-8601/RFC3339 timestamp so later agents can read “since checkpoint” slices.
+Resume order should prefer compact state first: `mission.md`, `internal/recovery-state.md`, `internal/tasks.jsonl`, `internal/agent-registry.md`, task-local `status.json`, and `handoff.md`. Then read append-only files only by tail, task id, or entries since the last checkpoint. If a log becomes important but large, write or refresh a compact handoff/snapshot instead of making future agents ingest the whole history.

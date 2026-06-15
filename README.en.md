@@ -4,7 +4,7 @@
 
 A tiny file-backed living loop for durable AI-agent work.
 
-LLL was formerly DOP, the Deep Orchestration Protocol. The rename does not change the core machinery. It changes the product surface: less cold protocol language, more emphasis on living work, repair, recovery, and continuation.
+LLL was formerly DOP, the Deep Orchestration Protocol. The rename does not change the core machinery. It clarifies the product surface: living work, repair, recovery, and continuation without heavyweight orchestration ceremony.
 
 ```text
 The filesystem is where the work lives.
@@ -12,7 +12,7 @@ The chat is only the current interface.
 The agent is the caretaker of the next loop.
 ```
 
-LLL turns the main chat into a lightweight supervisor. The durable state lives in files: mission, queue, logs, worker handoffs, validation, traceability, error reports, and final outputs. It is not LangGraph, Temporal, or a new agent platform. It is the small-tools version of durable agent work: solve 90% of the reliability problem with readable files, then escalate only when the simple path is no longer enough.
+LLL turns the main chat into a lightweight supervisor. Durable state lives in files: mission, queue, logs, worker handoffs, validation, traceability, error records, and final deliverables. It is not LangGraph, Temporal, or a new agent platform. It is the small-tools version of durable agent work: solve 90% of the reliability problem with readable files, then escalate only when the simple path is no longer enough.
 
 ## When to use it
 
@@ -24,7 +24,7 @@ Use LLL for:
 - work where evidence, process state, errors, and final conclusions should stay separate;
 - anything the user may later want to resume.
 
-Skip full LLL for simple Q&A, tiny edits, or tasks that fit safely in a few tool calls. When in doubt, use LLL-lite: a small workdir, a mission file, numbered outputs, traceability, and validation, without a heavy runner.
+Skip full LLL for simple Q&A, tiny edits, or tasks that fit safely in a few tool calls. When in doubt, use LLL Lite: a small workdir, `mission.md`, maybe `notes.md`, maybe one root report, and no heavy runner.
 
 ## Default workdir
 
@@ -39,9 +39,14 @@ Canonical layout:
 ```text
 <lll-workdir>/
   mission.md
+  01-<deliverable>.md        # optional human-facing deliverable beside mission.md
+  02-<deliverable>.md        # optional split when content/themes justify it
+  notes.md                   # optional Lite notes
   internal/
     tasks.jsonl
     runs.jsonl
+    error-report.jsonl       # append-only workflow/runtime abnormalities and repairs
+    traceability.jsonl       # append-only claim/source/change trace
     agent-registry.md
     recovery-state.md
     handoff.md
@@ -54,15 +59,9 @@ Canonical layout:
       log.txt
       handoff.md
       artifacts/
-  output/
-    00-index.md
-    01-<deliverable>.md
-    90-error-report.md
-    91-traceability.md
-    99-next-steps.md
 ```
 
-The paths stay boring on purpose. `mission.md`, `internal/`, and `output/` are easier for agents, scripts, and humans to understand than a fully metaphorical taxonomy. The Living layer belongs in the narrative, headings, lifecycle, and discipline, not in fragile machine interfaces.
+New workdirs no longer create `output/`, `00-index.md`, or standalone `99-next-steps.md` files. Human-readable deliverables live directly at the workdir root; next steps live inside the primary report or relevant deliverable; traceability and error records are JSONL files under `internal/` for cheap append and validation.
 
 ## The loop
 
@@ -75,11 +74,11 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 | Seed | Write or update `mission.md` |
 | Split | Decompose `internal/tasks.jsonl` and worker `task.md` |
 | Work | Workers write logs, evidence, drafts, and artifacts |
-| Trace | Track claims and evidence in `output/91-traceability.md` |
-| Heal | Record errors, repairs, and self-maintenance in `output/90-error-report.md` |
+| Trace | Append to `internal/traceability.jsonl` |
+| Heal | Append to `internal/error-report.jsonl` |
 | Validate | Write `internal/validation-report.md` |
 | Hand off | Refresh `internal/handoff.md` and `internal/recovery-state.md` |
-| Grow or Close | Update `output/99-next-steps.md` and decide whether to continue or close |
+| Grow or Close | Put current next steps inside the primary report/relevant deliverable |
 
 ## Name and slug
 
@@ -92,13 +91,13 @@ For local development, keep the canonical source repo under a project directory 
 `scripts/lll.py` is a thin stdlib helper. It does not run agents. It only helps maintain the file protocol.
 
 ```bash
-python scripts/lll.py init ~/lll-work/20260608_150000_demo --objective "Compare three self-hosted note-taking options"
-python scripts/lll.py add-task ~/lll-work/20260608_150000_demo --id T001 --title "collect candidates" --goal "Collect candidates and write a handoff"
-python scripts/lll.py status ~/lll-work/20260608_150000_demo --all
-python scripts/lll.py validate ~/lll-work/20260608_150000_demo
+python3 scripts/lll.py init ~/lll-work/20260608-150000_demo --objective "Compare three self-hosted note-taking options"
+python3 scripts/lll.py add-task ~/lll-work/20260608-150000_demo --id T001 --title "collect candidates" --goal "Collect candidates and write a handoff"
+python3 scripts/lll.py status ~/lll-work/20260608-150000_demo --all
+python3 scripts/lll.py validate ~/lll-work/20260608-150000_demo
 ```
 
-The old `scripts/lll.py` / compatibility `scripts/dop.py` name remains as a compatibility shim and forwards to `lll.py`. Old `~/dop-work/` directories remain readable; LLL does not force a bulk migration.
+The old `scripts/dop.py` name remains as a compatibility shim and forwards to `lll.py`. Old `~/dop-work/` directories remain readable; LLL does not force a bulk migration.
 
 ## Install
 
@@ -124,10 +123,6 @@ LLL keeps the reliable core intact:
 - small scripts before frameworks
 - handoffs before long chat summaries
 - independent validation before delivery
-- boring paths, living narrative
+- root deliverables, internal state
 
 Living is not decoration. It is the discipline that each caretaker should leave the work healthier, more traceable, and easier to resume than they found it.
-
-## License
-
-MIT

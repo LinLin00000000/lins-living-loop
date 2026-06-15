@@ -1,27 +1,18 @@
 # Internal LLL Handoff
 
 ```text
-status: <complete|partial|blocked>
-workdir: <path>
-validation: <PASS|PASS_WITH_NOTES|FAIL>
+status: pending
+last_updated: <local-timezone ISO-8601/RFC3339>
 ```
 
 ## Main human outputs
-- [output/00-index.md](../output/00-index.md): reading order and links
-- [output/01-<file>.md](../output/01-<file>.md): <description>
-- [output/90-error-report.md](../output/90-error-report.md): internal workflow/runtime abnormalities, repairs, and self-maintenance notes
-- [output/91-traceability.md](../output/91-traceability.md): claim/source/change trace map
-- [output/99-next-steps.md](../output/99-next-steps.md): current next actions
+- Root `01-*` deliverables beside `mission.md`, when created.
+- Current next steps belong inside the primary report or relevant deliverable.
 
-## One-line conclusion
-<short conclusion>
+## Current state
+- <compact status>
 
-## Caveats
-- <caveat or none>
-
-## Suggested next actions
-- <optional next step; keep output/99-next-steps.md authoritative>
-
-## Process traceability
-- [validation-report.md](validation-report.md): validation verdict
-- [agent-registry.md](agent-registry.md): worker/status map
+## Resume notes
+- Read `mission.md` and `internal/recovery-state.md` first.
+- Read worker handoffs before raw artifacts.
+- Read JSONL audit tails only as needed.

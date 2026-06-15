@@ -13,8 +13,8 @@ next_supervisor_action: define or run next task
 
 ## Resume steps
 1. Read [mission.md](../mission.md).
-2. Validate [internal/tasks.jsonl](tasks.jsonl) and [internal/runs.jsonl](runs.jsonl).
+2. Validate [internal/tasks.jsonl](tasks.jsonl) and [internal/runs.jsonl](runs.jsonl) when present.
 3. Inspect task status summary.
-4. Read only relevant worker handoffs under internal/agents/<task-id>/handoff.md first.
-5. Read [output/00-index.md](../output/00-index.md) for human-facing deliverables and audit files.
+4. Read only relevant worker handoffs under `internal/agents/<task-id>/handoff.md` first.
+5. Read root deliverables such as `../01-*.md`; inspect `traceability.jsonl` / `error-report.jsonl` tails only as needed.
 6. Continue from last_safe_checkpoint.

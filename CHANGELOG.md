@@ -1,11 +1,13 @@
 # Changelog
 
-## 1.0.0
+## Unreleased
 
-Initial public release as Lin's Living Loop / LLL.
+- Simplified new workdir layout: human-facing deliverables now live at the workdir root beside `mission.md`; new workdirs no longer create `output/`, `00-index.md`, or standalone next-step files.
+- Moved traceability and error reporting to append-only JSONL under `internal/traceability.jsonl` and `internal/error-report.jsonl`.
+- Updated helper script, templates, prompts, README, and key references to the compact current layout.
 
-- Renamed public surface from DOP to LLL while keeping DOP as a compatibility alias.
+## Previous
+
+- Renamed the public workflow surface to Lin's Living Loop / LLL while preserving DOP compatibility language.
 - Changed default new work root to `~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case/`.
-- Kept the reliable file-backed core: `mission.md`, `internal/`, `output/`, JSONL queues, handoffs, traceability, error reports, and validation.
 - Added `scripts/lll.py` as the primary helper and kept `scripts/dop.py` as a compatibility shim.
-- Added Chinese-first README with English version.

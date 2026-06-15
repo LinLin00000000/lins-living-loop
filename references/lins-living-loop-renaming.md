@@ -31,8 +31,8 @@ Keep old `~/dop-work/` directories resumable and do not bulk-rename old workdirs
 Good balance:
 
 - Public narrative: living loop, caretaker, habitat, growth, recovery, repair, lineage, next loop.
-- Machine paths: keep clear names such as `mission.md`, `internal/`, `output/`, `tasks.jsonl`, `runs.jsonl`, `recovery-state.md`.
-- Template headings may carry living language while filenames remain stable, e.g. `Error Report — Wounds and Repairs`, `Validation Report — Health Check`, `Next Loop`.
+- Machine paths: keep clear names such as `mission.md`, root `01-*` deliverables, `internal/`, `tasks.jsonl`, `runs.jsonl`, `error-report.jsonl`, `traceability.jsonl`, and `recovery-state.md`.
+- Template headings may carry living language while filenames remain stable, e.g. `Validation Report — Health Check` or a `Next Loop` section inside the primary report.
 
 Avoid over-metaphorizing paths such as `seed.md`, `roots/`, `fruits/`, or `scars.md` as canonical names; they are charming but reduce portability and agent comprehension.
 
@@ -77,11 +77,11 @@ Mapping:
 | Seed | Write or update `mission.md` |
 | Split | Decompose `tasks.jsonl` and worker `task.md` |
 | Work | Workers write artifacts and logs |
-| Trace | Keep claims/evidence in `output/91-traceability.md` |
-| Heal | Record workflow wounds and repairs in `output/90-error-report.md` |
+| Trace | Append claims/evidence to `internal/traceability.jsonl` |
+| Heal | Append workflow wounds and repairs to `internal/error-report.jsonl` |
 | Validate | Write `internal/validation-report.md` |
 | Hand off | Refresh `internal/handoff.md` and `internal/recovery-state.md` |
-| Grow or Close | Update `output/99-next-steps.md` and choose continuation/completion |
+| Grow or Close | Put current next steps inside the primary report or relevant root deliverable |
 
 ## Migration stance
 

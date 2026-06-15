@@ -1,38 +1,36 @@
 # LLL Worker Task
 
 ```text
-task_id: <T001>
-carrier: <current|synchronous_subagent|foreground_command|background_process|agent_cli|code_agent|scheduler|durable_board>
-preset: <default|fast-research|deep-research|critic|code|code-heavy|script>
+task_id: <task-id>
+carrier: <current|subagent|script|agent_cli|background|scheduler|board|human>
+preset: <preset-or-default>
 status: pending
 ```
 
 ## Objective
-<One narrow goal.>
+<worker goal>
 
 ## Inputs
-- <path/source>
+- [mission.md](../../../mission.md)
+- <other inputs>
 
 ## Required outputs
-- internal/agents/<task-id>/handoff.md
-- internal/agents/<task-id>/artifacts/<file>
+- [handoff.md](handoff.md)
+- [artifacts/](artifacts/) as needed
 
-## Boundaries
-- Do not edit shared final deliverables unless assigned.
-- Do not edit shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md`) unless explicitly assigned and protected by a lock/runner API.
-- Do not rely on chat context not present in files.
-- Do not exceed scope without recording the reason.
-- Default to the user-specified output language or current interaction language for prose; treat this as a hidden default and do not add language metadata labels unless language is explicitly part of the task. Use English for code, JSON keys, commands, API names, filenames, external terms, or user-specified English output.
-- If assigned a human-facing deliverable, write it under output/ with a two-digit numeric prefix and stable Markdown links.
-- If you create or modify any output/ file, update or ask the supervisor to update output/00-index.md.
+## Compact LLL contract
+- Read `mission.md`, this task file, and listed inputs before starting.
+- Treat the workdir as the source of truth; chat is only a short handoff.
+- Write detailed work, logs, evidence, drafts, and outputs under this task directory unless explicitly assigned a shared root deliverable.
+- Human-facing deliverables usually live at the workdir root as `01-*`, `02-*`, etc.; merge when one file preserves thematic completeness, split only when content or themes justify it.
+- Current next steps belong inside the primary report/relevant deliverable, not in a standalone next-step file.
+- Write an artifact skeleton early, then fill it incrementally for long reading/research tasks.
+- Do not edit shared state files unless explicitly granted ownership through a lock or runner API.
+- Keep claims traceable to artifact paths, sources, commands, or validation notes; append JSONL trace entries only when assigned/authorized.
+- If blocked, record what was tried and propose the smallest fallback.
 
 ## Logging
-Append commands, sources, decisions, failures, and retries to internal/agents/<task-id>/log.txt.
+Append commands, sources, decisions, failures, and retries to [log.txt](log.txt).
 
 ## Handoff contract
-Return only:
-- status
-- output paths
-- 1-3 key results
-- risks/blockers
-- recommended next step
+status, outputs, 1-3 key results, risks/blockers, recommended next step

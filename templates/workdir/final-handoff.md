@@ -1,5 +1,15 @@
-# Deprecated alias
+# Final Handoff
 
-New LLL v2 workdirs keep the canonical supervisor handoff at `internal/handoff.md` and human-facing next actions at `output/99-next-steps.md`.
+```text
+status: pending
+updated_at: <local-timezone ISO-8601/RFC3339>
+```
 
-This template remains only to avoid surprising older references. Do not maintain a second final handoff with diverging content.
+## Delivered files
+- `../01-<deliverable>.md`: <purpose>
+- `validation-report.md`: validation verdict and evidence
+- `traceability.jsonl`: append-only claim/source/change records
+- `error-report.jsonl`: append-only workflow/runtime abnormality and repair records
+
+## Current next step
+Summarize the next step already reflected inside the primary root deliverable.

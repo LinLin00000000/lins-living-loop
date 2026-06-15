@@ -12,8 +12,8 @@ status: initialized
 
 ## Success criteria
 - <Observable criterion>
-- <Required output path under output/>
-- <Validation expectation under internal/validation-report.md>
+- <Required root deliverable, e.g. `01-final-report.md`, when needed>
+- <Validation expectation under `internal/validation-report.md`>
 
 ## Non-goals
 - <What should not be done in this run?>
@@ -26,35 +26,30 @@ status: initialized
 - Time/budget/context limits: <limits>
 
 ## Inputs
-- <path/source>: <purpose; raw/reference materials should be copied or summarized under internal/inputs/ when durable>
+- <path/source>: <purpose; raw/reference materials should be copied or summarized under `internal/inputs/` when durable>
 
 ## Expected outputs
-- [output/00-index.md](output/00-index.md): human reading order and links; indexes every file in output/
-- [output/01-<file>.md](output/01-<file>.md): primary numbered human-facing deliverable when needed
-- [output/90-error-report.md](output/90-error-report.md): append-only workflow/runtime errors, corrections, and self-maintenance notes; says none if no such errors occurred
-- [output/91-traceability.md](output/91-traceability.md): append-only claim/source/change trace map
-- [output/99-next-steps.md](output/99-next-steps.md): mutable current next actions for the user
+- Root human-facing deliverable(s), usually `01-<file>.md`; merge when one file preserves thematic completeness, split when there are multiple independent themes or the file becomes too large.
+- Current next steps are a section inside the primary report or relevant deliverable, not a standalone Next Steps file.
+- `internal/error-report.jsonl`: append-only workflow/runtime abnormalities, repairs, and self-maintenance events.
+- `internal/traceability.jsonl`: append-only claim/source/change trace entries.
 
 ## Execution policy
 - Keep supervisor context small.
 - Workers may be current-agent actions, subagents, scripts, independent agent CLIs, scheduled jobs, board workers, or humans.
-- Workers write detailed outputs under [internal/agents/<task-id>/](internal/agents/).
-- Raw inputs, cloned repos, long logs, validation, handoff, and recovery state stay under [internal/](internal/).
-- Workers return only short handoffs.
-- Include a compact LLL contract in child-worker assignments; do not assume the worker loaded this skill.
+- Workers write detailed outputs under [internal/agents/<task-id>/](internal/agents/) only when there are real worker contexts/background jobs/runner tasks.
+- Raw inputs, cloned repos, long logs, validation, handoff, recovery state, traceability, and error logs stay under [internal/](internal/).
+- Human-facing deliverables live at the workdir root beside this file; do not create `output/`, `00-index.md`, or standalone next-step files for new workdirs.
+- Human-facing output body text follows the hidden default: the user-specified output language, or the current interaction language if none is specified. Do not add language metadata labels merely to announce the default.
 - Record state changes in this file, [internal/tasks.jsonl](internal/tasks.jsonl), [internal/runs.jsonl](internal/runs.jsonl), and [internal/recovery-state.md](internal/recovery-state.md).
-- Keep human-facing deliverables in [output/](output/) and number them with two-digit prefixes for sorting.
-- Human-facing output body text follows the hidden default: the user-specified output language, or the current interaction language if none is specified. Do not add language metadata labels merely to announce the default; record language only when it is an explicit task constraint.
-- Keep [output/00-index.md](output/00-index.md) current whenever output files are added, removed, or renamed.
-- Keep [output/90-error-report.md](output/90-error-report.md) and [output/91-traceability.md](output/91-traceability.md) append-only with local-timezone timestamped entries.
-- Rewrite [output/99-next-steps.md](output/99-next-steps.md) as the current recommended next action changes.
+- Append JSONL objects to [internal/error-report.jsonl](internal/error-report.jsonl) and [internal/traceability.jsonl](internal/traceability.jsonl); do not reread/rewrite whole logs just to append.
 - Use Markdown links for stable internal/external sources: relative links for files inside this workdir, URLs/absolute paths for stable external resources, and plain text for temporary external files whose location may change.
 - Give brief progress updates for long-running, multi-stage, background, or multi-worker phases.
 - Validate before final delivery.
 
 ## Mission addenda
 
-Append short timestamped entries when the user changes scope, constraints, output expectations, or reuse context. Keep detailed evidence in internal/ and audit files. If language is explicitly part of the task, record it as an ordinary constraint/addendum, not as a default metadata field.
+Append short timestamped entries when the user changes scope, constraints, output expectations, or reuse context. Keep detailed evidence in `internal/` and audit JSONL files. If language is explicitly part of the task, record it as an ordinary constraint/addendum, not as a default metadata field.
 
 | ts | change | impact |
 |---|---|---|
@@ -63,7 +58,7 @@ Append short timestamped entries when the user changes scope, constraints, outpu
 ## Recovery quick start
 1. Read this file and check `updated_at`, `status`, and recent addenda.
 2. Read [internal/recovery-state.md](internal/recovery-state.md).
-3. Inspect [internal/tasks.jsonl](internal/tasks.jsonl) status counts.
-4. Read relevant [internal/agents/<task-id>/handoff.md](internal/agents/) files.
-5. Read [output/00-index.md](output/00-index.md) for human-facing outputs.
+3. Inspect [internal/tasks.jsonl](internal/tasks.jsonl) status counts when present.
+4. Read relevant [internal/agents/<task-id>/handoff.md](internal/agents/) files when workers exist.
+5. Read root deliverables such as `01-*.md`; inspect JSONL audit tails only as needed.
 6. Continue from the latest safe checkpoint.

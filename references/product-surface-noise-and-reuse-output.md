@@ -1,37 +1,32 @@
-# Product-surface noise, error semantics, and reused-output strategy
+# Product surface noise and reuse output
 
-Use this reference when a LLL run is optimizing the workflow/product surface itself, or when a user corrects how `mission.md`, `output/`, or error reports should behave.
+Use this reference when a LLL run is optimizing the workflow/product surface itself, or when a user corrects how `mission.md`, root deliverables, or error/trace records should behave.
 
 ## Hidden defaults vs visible deliverables
 
-- Treat interaction/output language as a hidden default, not visible metadata.
 - Follow the user's explicitly requested language; if none is specified, use the current interaction language.
-- Do **not** add product-noise fields such as `language_rule`, `interaction_language`, or `output_language` to `mission.md` or human-facing `output/*.md` files.
+- Do **not** add product-noise fields such as `language_rule`, `interaction_language`, or `output_language` to `mission.md` or human-facing deliverables.
 - Only mention language visibly when language itself is a task constraint, a deliverable requirement, or a source of ambiguity that must be resolved.
 
-## Error Report scope
+## Error report scope
 
-`output/90-error-report.md` is for workflow/runtime abnormalities, not for restating the user's goals.
+`internal/error-report.jsonl` is for workflow/runtime abnormalities, not for restating the user's goals.
 
-Record:
-- failed assumptions;
-- worker/tool/template/helper/skill defects;
-- validation failures;
-- queue/registry/status drift;
-- abnormal recovery steps;
-- fixes applied and follow-up hardening items.
+Good entries:
+- failed command and repair;
+- wrong internal assumption and fix;
+- stale skill guidance and patch;
+- validation failure and recovery;
+- queue/registry drift.
 
-Do **not** record normal user requirements, new goals, scope additions, or product decisions as errors. Put those in `mission.md` addenda, `internal/tasks.jsonl`, `output/91-traceability.md`, or a numbered deliverable.
+Do **not** record normal user requirements, new goals, scope additions, or product decisions as errors. Put those in `mission.md` addenda, tasks, root deliverables, or `internal/traceability.jsonl`.
 
-## Reused workspace output strategy
+## Reuse deliverable lifecycle
 
-When a LLL workspace is reused:
+Do not create a new file for every chat turn.
 
-- Update `01-*` when the new work is a small correction, clarification, refinement, or convergence of the same main deliverable.
-- Create `02-*`, `03-*`, etc. when the new work is an independently readable analysis, decision, phase result, or substantial add-on.
-- Keep `00-index.md` as the navigation layer. It should tell the reader which file is the current recommended entry point and what each numbered deliverable is for.
+- Update the current root `01-*` primary deliverable for same-scope corrections, clarifications, style cleanup, small supplements, or rewrites.
+- Create root `02-*`, `03-*`, etc. when the new work is an independently readable analysis, decision, phase result, or substantial add-on.
+- Do not keep a separate index for small file sets; root filenames and the final chat response should make the entry point obvious.
 - Do not force all history into `01-final-report.md`; it should carry the current main conclusion, not become a changelog.
-
-## Analyze-only guardrail
-
-If the user says “先不要执行 / analyze first / don’t execute yet,” do not mutate the LLL workspace, templates, skill files, or outputs. Provide the decision analysis first, then wait for explicit approval before writing files or running workflow-changing commands.
+- Current next steps belong inside the primary report or relevant deliverable.

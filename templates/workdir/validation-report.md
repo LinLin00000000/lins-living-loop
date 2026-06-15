@@ -9,10 +9,11 @@ validator: <agent/tool>
 ## Structure check
 | criterion | status | evidence |
 |---|---|---|
-| required v2 files exist | pending | [mission](../mission.md), [internal queue](tasks.jsonl), [output index](../output/00-index.md) |
-| output files are indexed | pending | [output/00-index.md](../output/00-index.md) |
-| required audit files exist | pending | [90-error-report](../output/90-error-report.md), [91-traceability](../output/91-traceability.md), [99-next-steps](../output/99-next-steps.md) |
-| human-facing output language is correct | pending | primary `output/01-*` deliverable body follows requested/current interaction language |
+| required current-layout files exist | pending | [mission](../mission.md), [internal queue](tasks.jsonl), [traceability](traceability.jsonl), [error report](error-report.jsonl) |
+| obsolete output layer absent | pending | no `output/`, `00-index.md`, or standalone next-step file generated for new workdirs |
+| human-facing deliverables are top-level | pending | primary `../01-*` deliverable(s), when required by mission |
+| JSONL audit logs parse | pending | [traceability](traceability.jsonl), [error report](error-report.jsonl), [runs](runs.jsonl) |
+| human-facing output language is correct | pending | primary deliverable body follows requested/current interaction language |
 
 ## Mission criteria check
 | criterion | status | evidence |
@@ -26,9 +27,7 @@ validator: <agent/tool>
 - none yet
 
 ## Traceability
-| claim/output | supporting file(s) |
-|---|---|
-| <claim> | [<relative workdir file>](<relative-path>) or [<stable external source>](<url-or-absolute-path>) |
+Use `internal/traceability.jsonl` for append-only claim/source/change records. Link the relevant entries or summarize the checked item here.
 
 ## Final decision
 pending
