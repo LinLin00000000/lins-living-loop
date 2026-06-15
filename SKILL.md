@@ -1,7 +1,7 @@
 ---
 name: lins-living-loop
 abbreviation: LLL
-description: Use this skill whenever the user asks for Lin's Living Loop, LLL, living loop, DOP, Deep Orchestration Protocol, 深度编排协议, 深度调研, 深入研究, 重型任务, 长时任务, 可恢复执行, 并行 agent, background agent, durable work, or complex multi-step work likely to cause context explosion, API timeouts, upstream instability, long-running execution, workspace reuse, or nontrivial validation. This skill turns chat into a lightweight supervisor, keeps the filesystem as the durable source of truth, chooses the simplest reliable carrier, puts human deliverables at the workdir root beside mission.md, keeps process/audit state under internal/, and treats skills/workflows as living procedural memory that can repair itself without becoming ceremonial.
+description: Use this skill whenever the user asks for Lin's Living Loop, LLL, living loop, DOP, Deep Orchestration Protocol, 深度编排协议, 深度调研, 深入研究, 重型任务, 长时任务, 可恢复执行, 并行 agent, background agent, durable work, or complex multi-step work likely to cause context explosion, API timeouts, upstream instability, long-running execution, workspace reuse, or nontrivial validation. This skill turns chat into a lightweight supervisor, keeps the filesystem as the durable source of truth, chooses the simplest reliable carrier, puts human deliverables at the workdir root beside mission.md, keeps process/audit state under internal/, enforces that human-facing deliverable prose follows the user's requested/current interaction language instead of silently falling back to English templates, and treats skills/workflows as living procedural memory that can repair itself without becoming ceremonial.
 version: 1.1.1
 author: Lin
 license: MIT
@@ -150,6 +150,8 @@ Next steps belong as a section inside the primary deliverable or the relevant de
 
 Human-facing prose follows the user's explicitly requested output language; if none is specified, use the current interaction language. Treat this as a hidden default, not metadata. Keep filenames, JSON keys, commands, API names, code identifiers, and stable external proper nouns in English when useful.
 
+This applies to root deliverables such as release summaries, synthesis reports, architecture notes, validation summaries intended for the user, README-style handoffs, and any worker output assigned as a human-facing artifact. Internal scaffolding and template headings may start in English, but copied/generated template prose must be localized before final delivery. A human-facing deliverable in the wrong language is a workflow error and must be repaired or explicitly recorded as a blocker before closing the loop.
+
 ## JSONL audit logs
 
 `internal/error-report.jsonl` and `internal/traceability.jsonl` are append-only logs. JSONL is preferred because these files behave like event streams: future agents can append one object to the end without rereading or rewriting the full file, and structure validation is cheap.
@@ -234,8 +236,9 @@ Empty done directories are a workflow error: repair them before final delivery a
 11. Synthesize into one or more root deliverables.
 12. Append traceability and error JSONL entries as needed.
 13. Validate independently.
-14. Ensure `mission.md`, root deliverables, `internal/traceability.jsonl`, `internal/error-report.jsonl`, and `internal/validation-report.md` are current before final delivery.
-15. Final reply points to deliverables and gives a short conclusion.
+14. After a validator-only pass, run a supervisor closeout loop: consume the verdict, repair safe structural gaps, check the language of every human-facing root deliverable against the requested/current interaction language, update validation task/registry status, refresh `mission.md`, `internal/recovery-state.md`, and `internal/handoff.md`, and append trace/error JSONL entries as needed. Do not deliver while validation is still pending in shared state, expected handoff files are missing, or a primary human-facing deliverable is in the wrong language.
+15. Ensure `mission.md`, root deliverables, `internal/traceability.jsonl`, `internal/error-report.jsonl`, `internal/validation-report.md`, and `internal/handoff.md` are current before final delivery.
+16. Final reply points to deliverables and gives a short conclusion.
 
 ## Progress updates
 
@@ -269,6 +272,10 @@ Do not default to LangGraph, Temporal, Celery, Kanban, a database, or a daemon. 
 Use a synthesis worker when there are multiple substantive outputs, conflicts, or a final synthesis/decision. Synthesis reads mission, registry, worker handoffs, and selected artifacts; it writes root deliverables and JSONL audit entries.
 
 Every nontrivial LLL task needs an independent validation pass by someone other than the producer of the final artifact.
+
+For security-sensitive public release work—especially publishing a repository, package, skill, installer, or template derived from private/local materials—use multiple independent validation perspectives by default. A good minimum is: one deterministic/scripted scan by the supervisor plus at least two independent validator workers with different prompts or emphases, such as secret/privacy leakage, install/runtime safety, and mission/usefulness. If only one validator is practical, record the reason in `internal/error-report.jsonl` or the validation report.
+
+Delegated validators are real LLL workers even when they are synchronous subagents. Create `internal/agents/<validation-task-id>/` records for them (task, status, handoff/log or summary, and any artifacts) or explicitly record why a lighter inline validation was chosen. Do not let `internal/` imply “single-agent work” when subagents materially contributed to safety or correctness.
 
 Validate two layers:
 1. **Structure validation**: required files exist, JSONL parses, task ids/statuses/dependencies are valid, task output paths stay under the worker directory, per-task files exist for real tasks, no obsolete new-layout `output/` surface exists, and validation/handoff files exist before final delivery.
@@ -348,6 +355,7 @@ Load only when needed:
 - `references/product-surface-noise-and-reuse-output.md`: product-surface guardrails for hidden defaults, error report scope, and reuse deliverables.
 - `references/session-lessons-2026-06-15-compact-layout-jsonl.md`: concrete lesson for compact root deliverables, removing `output/`/index/next-step scaffolding, JSONL audit logs, and generator-surface migration checks.
 - `references/session-lessons-2026-06-15-lll-trigger-vs-execution.md`: concrete lesson that loading the LLL skill is not enough; non-trivial/large-context work should use at least LLL Lite and externalize the task contract before context drift.
+- `references/session-lessons-2026-06-15-validation-closeout.md`: validator-only pass closeout pattern — supervisor repairs safe structural gaps, updates validation task/registry state, refreshes handoff/recovery, and rechecks structure before delivery.
 - `references/lins-living-loop-renaming.md`: naming and product-surface direction.
 - `templates/workdir/`, `templates/task/`, `templates/prompts/`: starter files and worker prompt patterns.
 - `scripts/lll.py`: optional stdlib file helper for init/add-task/status/set-status/event/checkpoint/structure validation. `scripts/dop.py` is a compatibility shim.

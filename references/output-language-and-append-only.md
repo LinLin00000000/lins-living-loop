@@ -4,12 +4,12 @@ Human-facing root deliverables are the user's reading surface. They should not s
 
 ## Output language rule
 
-- Human-facing prose in root deliverables named from the task, such as `architecture-options.md` or `validation-summary.md` follows the user's explicitly requested output language.
+- Human-facing prose in root deliverables named from the task, such as `architecture-options.md`, `release-summary.md`, `validation-summary.md`, or other files the final chat points the user to as the main result, follows the user's explicitly requested output language.
 - If the user did not specify an output language, use the current interaction language.
 - Treat this as a hidden default. Do not add `language_rule`, `interaction_language`, or `output_language` markers to `mission.md` or deliverables merely to announce it.
 - Record language only when it is a real task constraint: non-default output language, bilingual deliverables, translation work, or cross-language handoff risk. Put it in normal constraints/expected outputs/addenda, not in mandatory metadata fields.
 - Keep filenames, JSON keys, commands, API names, code identifiers, and stable external proper nouns in English when useful for portability.
-- Validate language explicitly before final delivery; do not rely on worker prompt language rules alone.
+- Validate language explicitly before final delivery; do not rely on worker prompt language rules alone. The closeout check should open or sample every primary human-facing root deliverable, not just verify that the validation report has a language row.
 
 ## Reuse deliverable lifecycle
 

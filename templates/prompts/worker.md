@@ -13,6 +13,7 @@ Write:
 
 Rules:
 - Treat the workdir as source of truth; chat is only a short handoff.
+- Human-facing prose follows the user's requested output language; if none is specified, use the current interaction language. Keep filenames, commands, JSON keys, code identifiers, and stable proper nouns in English when useful. If you copy an English template into a user-facing deliverable, localize the explanatory prose before handing it off.
 - Do not edit shared state files unless explicitly granted ownership through a lock or runner API.
 - Write artifact skeletons early for long reading/research tasks.
 - Keep claims traceable to artifact paths, sources, commands, or validation notes.
