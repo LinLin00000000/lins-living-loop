@@ -50,7 +50,7 @@ LLL has two orthogonal decisions:
 
 Choose the structure mode first, then the lightest reliable carrier.
 
-Use **full LLL** when the work has multiple independent research objects, multiple execution tracks, long-running/background work, large evidence, or separate producer/validator roles.
+Use **full LLL** when the work has multiple independent research objects, multiple execution tracks, long-running/background work, large evidence, or separate producer/validator roles. For research tasks where the user asks for multiple directions, divergent search, deep research, or parallel agents, treat full LLL as the default and launch independent research directions concurrently where the carrier supports it.
 
 Use **LLL Lite** for single-track work where one agent can finish without context explosion. Lite is still file-backed, but it should stay visibly simple: `mission.md`, maybe `notes.md`, maybe one root deliverable, and optional `internal/validation-report.md`. If the current conversation is already large, Lite is the minimum drift guard even when the task has only one track. Do not manufacture worker directories when there were no real workers.
 
@@ -231,7 +231,7 @@ Empty done directories are a workflow error: repair them before final delivery a
 6. Decompose into orthogonal tasks with explicit outputs and acceptance checks.
 7. Choose structure mode: no LLL, LLL Lite, or full LLL.
 8. Choose the lightest honest carrier for each task: inline supervisor, subagent, script, background process, independent CLI, scheduler, runner, or board.
-9. Launch work; make workers write files and return short handoffs.
+9. Launch work; make workers write files and return short handoffs. When multiple synchronous `delegate_task` workers are intended to run in parallel, submit them in one batch call via `delegate_task(tasks=[...])` instead of making sequential `delegate_task` calls. Sequential child calls are only acceptable when later tasks depend on earlier outputs, or when rate limits/tool constraints require serialization; otherwise record the reason in the handoff or error log.
 10. Keep supervisor context small: read compact state and handoffs first; read raw artifacts only when needed.
 11. Synthesize into one or more root deliverables.
 12. Append traceability and error JSONL entries as needed.
@@ -356,6 +356,12 @@ Load only when needed:
 - `references/session-lessons-2026-06-15-compact-layout-jsonl.md`: concrete lesson for compact root deliverables, removing `output/`/index/next-step scaffolding, JSONL audit logs, and generator-surface migration checks.
 - `references/session-lessons-2026-06-15-lll-trigger-vs-execution.md`: concrete lesson that loading the LLL skill is not enough; non-trivial/large-context work should use at least LLL Lite and externalize the task contract before context drift.
 - `references/session-lessons-2026-06-15-validation-closeout.md`: validator-only pass closeout pattern — supervisor repairs safe structural gaps, updates validation task/registry state, refreshes handoff/recovery, and rechecks structure before delivery.
+- `references/session-lessons-2026-06-16-source-research-traceability.md`: source-research runs should append traceability records for fixed inputs and top-level claims before closeout.
+- `references/session-lessons-2026-06-16-community-evidence-research.md`: community/forum evidence research should use reliability tiers, label blocked/search-snippet evidence as weak, record absence-of-evidence, and separate practical reports from source/architecture analysis.
+- `references/session-lessons-2026-06-16-commercial-agent-ecosystem-research.md`: commercial/forked agent ecosystem comparisons should separate entry, execution, state, and governance layers; treat self-hosted systems as sovereign state/control layers when long-term memory, auditability, migration, or AI-OS goals matter.
+- `references/session-lessons-2026-06-17-public-repo-local-overlay-audit.md`: public repo / skillpack / AIOS kit publishing should split portable base files from ignored local overlays, run deterministic public-audit scans, and verify fresh remote clones plus reachable history before closeout.
+- `references/session-lessons-2026-06-17-aios-kit-friend-install.md`: one-key friend/new-machine deployment for AIOS kits should include a root installer, temp-HOME smoke install, runtime-skill fallback validation for independent first-party skills, bounded install retries, and post-push remote-surface checks.
+- `references/session-lessons-2026-06-18-aios-instance-root.md`: AIOS/distribution installer runs should separate product source from deployed instance root, use safe compatibility symlinks, validate root-derived paths and registry atomicity, protect unmanaged skill targets, and smoke-test from tracked/non-ignored files.
 - `references/lins-living-loop-renaming.md`: naming and product-surface direction.
 - `templates/workdir/`, `templates/task/`, `templates/prompts/`: starter files and worker prompt patterns.
 - `scripts/lll.py`: optional stdlib file helper for init/add-task/status/set-status/event/checkpoint/structure validation. `scripts/dop.py` is a compatibility shim.
