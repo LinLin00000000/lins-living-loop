@@ -9,3 +9,15 @@ SKILL.local.md
 # Installed-skill manager/runtime artifacts. The canonical repo root is the skill package.
 .claude/
 skills-lock.json
+
+# Local development/runtime artifacts.
+.pytest_cache/
+.venv/
+dist/
+build/
+*.egg-info/
+.agent-loop/
+runner-run-*/
+*.log
+.env
+.env.*

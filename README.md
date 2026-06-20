@@ -88,18 +88,42 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 
 长期源码目录建议放在 `~/projects/lins-living-loop`。`~/lll-work/` 只放一次次 LLL 运行的工作记录，不作为项目源码仓库。
 
-## helper 脚本
+## `lll` CLI
 
-`scripts/lll.py` 是一个很薄的 stdlib helper，不运行 agent，只帮你维护文件协议。
+`lll` 是 LLL 文件协议的 stdlib reference implementation：负责初始化、任务队列、状态/验证、runner、reaper 与服务 wrapper 生成；它不是 planning brain、Web UI 或平台。
+
+仓库内可直接运行：
 
 ```bash
-python3 scripts/lll.py init ~/lll-work/20260608-150000_demo --objective "比较三个自部署笔记方案"
-python3 scripts/lll.py add-task ~/lll-work/20260608-150000_demo --id T001 --title "collect candidates" --goal "收集候选方案并写 handoff"
-python3 scripts/lll.py status ~/lll-work/20260608-150000_demo --all
-python3 scripts/lll.py validate ~/lll-work/20260608-150000_demo
+./lll init ~/lll-work/20260608-150000_demo --objective "比较三个自部署笔记方案"
+./lll task add ~/lll-work/20260608-150000_demo \
+  --title "write marker" \
+  --goal "创建一个 marker 文件" \
+  --preset code-loop \
+  --command "printf ok > marker.txt" \
+  --verify "test -f marker.txt"
+./lll status ~/lll-work/20260608-150000_demo --all
+./lll validate ~/lll-work/20260608-150000_demo
+./lll run once ~/lll-work/20260608-150000_demo
+./lll service install ~/lll-work/20260608-150000_demo --target systemd --user
 ```
 
-老名字 `scripts/dop.py` 还保留为兼容入口，会转发到 `lll.py`。旧的 `~/dop-work/` 工作区也可以继续读，不强制迁移。
+也可以安装为 Python console script（仍然只有标准库运行依赖）：
+
+```bash
+python3 -m pip install .
+lll --help
+```
+
+`scripts/lll.py` 现在保留为兼容 shim，会转发到 `src/lll_cli`；旧命令 `add-task` / `set-status` 仍可用，但新文档优先使用 `task add` / `task set-status`。老名字 `scripts/dop.py` 还保留为兼容入口，会转发到 `lll.py`。旧的 `~/dop-work/` 工作区也可以继续读，不强制迁移。
+
+### Code Loop / Runner 边界
+
+- `shell` executor 是 MVP 默认 executor，用于本体 smoke、自举和本地脚本型任务。
+- runner 会写 `internal/agents/<task-id>/artifacts/runner-run-<run-id>/`，并由 verify 命令决定是否 `succeeded`。
+- `serve` 和 `reaper` 提供连续执行与过期 lease 回收；默认仍保持单机、单并发、文件状态。
+- service 子命令默认生成 systemd/launchd/Windows Task Scheduler wrapper 文件；只有显式 `--apply` 才尝试安装 systemd user service。
+- AIOS 可以通过 `aios lll ...` 发现/代理 LLL，但不拥有 LLL 状态机。
 
 ## 安装
 

@@ -50,6 +50,19 @@ LLL has two orthogonal decisions:
 
 Choose the structure mode first, then the lightest reliable carrier.
 
+## Code Loop mode
+
+Use Code Loop mode when the user asks for continuous coding, long-running coding agents, repeated develop/test/fix loops, coding runner/daemon behavior, or Ralph-loop-like workflows.
+
+Default behavior:
+1. Keep LLL as the protocol: create or reuse a normal LLL workdir with `mission.md` and `internal/` state.
+2. Compile the coding objective into one or more `code-loop` tasks with explicit `--command`, `--verify`, safety boundary, repo/cwd, max attempts, and delivery policy.
+3. Prefer the independent `lll` CLI reference implementation for machine lifecycle: `lll task add`, `lll run once`, `lll run serve`, `lll run reaper`, and `lll service install`.
+4. Let the runner manage lease/timeout/retry/artifacts/status; let Hermes or another agent remain responsible for judgment, synthesis, validation, and user-facing handoff.
+5. In AIOS environments, `aios lll ...` may discover/proxy LLL workdirs and check module health, but it must not duplicate the LLL state machine.
+
+Boundary: the skill teaches agents when and how to use LLL/Code Loop; the CLI is the reference implementation; executors such as shell/Hermes/Claude/Codex are replaceable adapters. Do not turn the skill into the runtime or the CLI into a planning brain.
+
 Use **full LLL** when the work has multiple independent research objects, multiple execution tracks, long-running/background work, large evidence, or separate producer/validator roles. For research tasks where the user asks for multiple directions, divergent search, deep research, or parallel agents, treat full LLL as the default and launch independent research directions concurrently where the carrier supports it.
 
 Use **LLL Lite** for single-track work where one agent can finish without context explosion. Lite is still file-backed, but it should stay visibly simple: `mission.md`, maybe `notes.md`, maybe one root deliverable, and optional `internal/validation-report.md`. If the current conversation is already large, Lite is the minimum drift guard even when the task has only one track. Do not manufacture worker directories when there were no real workers.
