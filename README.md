@@ -92,6 +92,17 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 
 `lll` 是 LLL 文件协议的 stdlib reference implementation：负责初始化、任务队列、状态/验证、runner、reaper 与服务 wrapper 生成；它不是 planning brain、Web UI 或平台。
 
+LLL 的默认用户是 Agent，不是人类终端用户：人类通常只提出目标与验收标准，Agent 负责发现 `lll`/`aios lll`、创建工作区、写任务、执行 runner、读取 artifacts、修复失败并收尾。README 里的命令主要是 Agent 操作手册与极端情况下的人类 fallback，不要求人类逐条理解或手输。
+
+Agent 优先的健康检查入口：
+
+```bash
+lll --version
+lll doctor --json
+lll doctor <workdir> --json
+aios lll doctor --json
+```
+
 仓库内可直接运行：
 
 ```bash

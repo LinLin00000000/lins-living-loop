@@ -20,10 +20,15 @@ def run(*args: str, cwd: Path | None = None, check: bool = True) -> subprocess.C
 
 
 class LLLCliSmokeTests(unittest.TestCase):
-    def test_help(self) -> None:
+    def test_help_version_and_doctor(self) -> None:
         cp = run("--help")
         self.assertIn("init", cp.stdout)
         self.assertIn("run", cp.stdout)
+        self.assertIn("doctor", cp.stdout)
+        self.assertRegex(run("--version").stdout.strip(), r"^lll \d+\.\d+\.\d+")
+        data = json.loads(run("doctor", "--json", "--root", str(ROOT)).stdout)
+        self.assertEqual(data["schema"], "lll.doctor.v1")
+        self.assertTrue(data["ok"])
 
     def test_init_task_validate(self) -> None:
         with tempfile.TemporaryDirectory() as td:

@@ -24,6 +24,11 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterator
 
+try:
+    from . import __version__
+except ImportError:  # pragma: no cover - direct source-file execution fallback
+    __version__ = "0.1.0"
+
 VALID_STATUS = {
     "pending", "ready", "leased", "running", "verifying", "succeeded",
     "failed_retryable", "failed_terminal", "cancelled",
@@ -942,8 +947,50 @@ def cmd_list_workdirs(args: argparse.Namespace) -> None:
             print(f"- {r['name']} [{'lll' if r['is_lll'] else 'dir'}] {r['path']}")
 
 
+def cmd_doctor(args: argparse.Namespace) -> None:
+    """Emit a compact readiness report for agents and install scripts."""
+    root = Path(args.root).expanduser().resolve()
+    executable = Path(sys.argv[0]).expanduser()
+    source_dir = Path(__file__).resolve().parents[2]
+    checks: list[dict[str, Any]] = []
+
+    def check(name: str, ok: bool, detail: str) -> None:
+        checks.append({"name": name, "ok": ok, "detail": detail})
+
+    check("python", sys.version_info >= (3, 11), sys.version.split()[0])
+    check("source_dir", source_dir.exists(), str(source_dir))
+    if args.create_root:
+        root.mkdir(parents=True, exist_ok=True)
+    root_ready = root.exists() or root.parent.exists()
+    root_detail = str(root) if root.exists() else f"{root} (will be created by init/run commands)"
+    check("work_root", root_ready, root_detail)
+    if args.workdir:
+        wd = Path(args.workdir).expanduser().resolve()
+        check("workdir", wd.exists(), str(wd))
+        if wd.exists():
+            valid, messages = validate_workdir(wd, mode=args.mode)
+            check("workdir_validate", valid, "; ".join(messages[:5]) if messages and not valid else f"valid ({layout_kind(wd)}, {args.mode})")
+    report = {
+        "schema": "lll.doctor.v1",
+        "ok": all(c["ok"] for c in checks),
+        "version": __version__,
+        "executable": str(executable),
+        "source_dir": str(source_dir),
+        "default_root": str(root),
+        "checks": checks,
+    }
+    if args.json:
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    else:
+        print(f"lll {__version__}")
+        for c in checks:
+            print(f"{c['name']}: {'ok' if c['ok'] else 'missing'} - {c['detail']}")
+    raise SystemExit(0 if report["ok"] else 1)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="lll", description="Lin's Living Loop CLI reference implementation", epilog=f"Recommended new workdir pattern: {RECOMMENDED_WORKDIR_PATTERN}")
+    p.add_argument("--version", action="version", version=f"lll {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("init", help="create a LLL workdir")
@@ -972,6 +1019,7 @@ def build_parser() -> argparse.ArgumentParser:
     si = svsub.add_parser("install", help="generate/install service wrapper"); si.add_argument("workdir"); si.add_argument("--target", required=True, choices=["systemd", "launchd", "windows-task"]); si.add_argument("--user", action="store_true"); si.add_argument("--name"); si.add_argument("--interval", type=int, default=300); si.add_argument("--runner-bin"); si.add_argument("--apply", action="store_true"); si.add_argument("--no-enable", action="store_true"); si.add_argument("--json", action="store_true"); si.set_defaults(func=cmd_service_install)
 
     lw = sub.add_parser("list", help="list probable LLL workdirs under a root"); lw.add_argument("--root", default="~/lll-work"); lw.add_argument("--all", action="store_true"); lw.add_argument("--limit", type=int, default=50); lw.add_argument("--json", action="store_true"); lw.set_defaults(func=cmd_list_workdirs)
+    d = sub.add_parser("doctor", help="check CLI readiness and optionally validate a workdir"); d.add_argument("workdir", nargs="?"); d.add_argument("--root", default="~/lll-work"); d.add_argument("--mode", choices=["auto", "full", "lite"], default="auto"); d.add_argument("--create-root", action="store_true"); d.add_argument("--json", action="store_true"); d.set_defaults(func=cmd_doctor)
 
     # Backward-compatible flat helper commands.
     a = sub.add_parser("add-task", help=argparse.SUPPRESS); a.add_argument("workdir"); a.add_argument("--id"); a.add_argument("--title", required=True); a.add_argument("--goal", required=True); a.add_argument("--carrier", default="lll"); a.add_argument("--preset", default="manual"); a.add_argument("--priority", type=int, default=10); a.add_argument("--depends-on", action="append", default=[]); a.add_argument("--acceptance", action="append", default=[]); a.add_argument("--inputs", action="append", default=[]); a.add_argument("--max-attempts", type=int, default=2); a.add_argument("--out", default=""); a.set_defaults(func=lambda x: cmd_task_add(argparse.Namespace(**{**vars(x), "executor": "shell", "command": None, "verify": None, "timeout": 3600, "lease_ttl": None, "repo": None, "cwd": None, "use_worktree": None, "delivery": "handoff", "json": False})))

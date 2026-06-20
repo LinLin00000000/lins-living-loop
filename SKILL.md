@@ -55,11 +55,13 @@ Choose the structure mode first, then the lightest reliable carrier.
 Use Code Loop mode when the user asks for continuous coding, long-running coding agents, repeated develop/test/fix loops, coding runner/daemon behavior, or Ralph-loop-like workflows.
 
 Default behavior:
-1. Keep LLL as the protocol: create or reuse a normal LLL workdir with `mission.md` and `internal/` state.
-2. Compile the coding objective into one or more `code-loop` tasks with explicit `--command`, `--verify`, safety boundary, repo/cwd, max attempts, and delivery policy.
-3. Prefer the independent `lll` CLI reference implementation for machine lifecycle: `lll task add`, `lll run once`, `lll run serve`, `lll run reaper`, and `lll service install`.
-4. Let the runner manage lease/timeout/retry/artifacts/status; let Hermes or another agent remain responsible for judgment, synthesis, validation, and user-facing handoff.
-5. In AIOS environments, `aios lll ...` may discover/proxy LLL workdirs and check module health, but it must not duplicate the LLL state machine.
+1. Assume the human delegates goals, constraints, and acceptance criteria; the Agent operates the CLI. Human-facing commands are fallback documentation, not the primary UX.
+2. Discover readiness with `lll --version`, `lll doctor --json`, and in AIOS environments `aios lll doctor --json` before starting long unattended work.
+3. Keep LLL as the protocol: create or reuse a normal LLL workdir with `mission.md` and `internal/` state.
+4. Compile the coding objective into one or more `code-loop` tasks with explicit `--command`, `--verify`, safety boundary, repo/cwd, max attempts, and delivery policy.
+5. Prefer the independent `lll` CLI reference implementation for machine lifecycle: `lll task add`, `lll run once`, `lll run serve`, `lll run reaper`, and `lll service install`.
+6. Let the runner manage lease/timeout/retry/artifacts/status; let Hermes or another agent remain responsible for judgment, synthesis, validation, and user-facing handoff.
+7. In AIOS environments, `aios lll ...` may discover/proxy LLL workdirs and check module health, but it must not duplicate the LLL state machine.
 
 Boundary: the skill teaches agents when and how to use LLL/Code Loop; the CLI is the reference implementation; executors such as shell/Hermes/Claude/Codex are replaceable adapters. Do not turn the skill into the runtime or the CLI into a planning brain.
 
