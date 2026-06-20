@@ -184,12 +184,14 @@ def ensure_safe_relative_out(workdir: Path, out: str, task_id: str | None = None
     return rel.as_posix().rstrip("/") + "/"
 
 
-def event(workdir: Path, *, task_id: str | None, event_name: str, status: str = "info", message: str = "", artifacts: list[str] | None = None, carrier: str = "lll", actor: str = "lll", exit_code: int | None = None, duration_ms: int | None = None, run_id: str | None = None) -> None:
-    append_jsonl(runs_path(workdir), {
+def event(workdir: Path, *, task_id: str | None, event_name: str, status: str = "info", message: str = "", artifacts: list[str] | None = None, carrier: str = "lll", actor: str = "lll", exit_code: int | None = None, duration_ms: int | None = None, run_id: str | None = None) -> dict[str, Any]:
+    obj = {
         "ts": now(), "run_id": run_id or "R-" + uuid.uuid4().hex[:10], "task_id": task_id,
         "actor": actor, "carrier": carrier, "event": event_name, "status": status,
         "message": message, "artifacts": artifacts or [], "exit_code": exit_code, "duration_ms": duration_ms,
-    })
+    }
+    append_jsonl(runs_path(workdir), obj)
+    return obj
 
 
 def read_config(workdir: Path) -> dict[str, Any]:
@@ -558,8 +560,12 @@ def cmd_validate(args: argparse.Namespace) -> None:
 
 
 def cmd_event(args: argparse.Namespace) -> None:
-    event(Path(args.workdir).expanduser().resolve(), task_id=args.task_id, event_name=args.event, status=args.status, message=args.message, artifacts=args.artifact or [], carrier=args.carrier, actor=args.actor)
-    print("event appended")
+    wd = Path(args.workdir).expanduser().resolve()
+    obj = event(wd, task_id=args.task_id, event_name=args.event, status=args.status, message=args.message, artifacts=args.artifact or [], carrier=args.carrier, actor=args.actor)
+    if args.json:
+        print(json.dumps({"schema": "lll.event.v1", "ok": True, "workdir": str(wd), "event": obj}, indent=2, ensure_ascii=False))
+    else:
+        print("event appended")
 
 
 def cmd_checkpoint(args: argparse.Namespace) -> None:
@@ -581,8 +587,12 @@ next_supervisor_action: {args.next_action}
 ```
 """
     atomic_write(recovery_path(wd), text)
-    event(wd, task_id=None, event_name="checkpoint", status="ok", message=args.checkpoint, artifacts=[rel_to_workdir(wd, recovery_path(wd))])
-    print("checkpoint updated")
+    obj = event(wd, task_id=None, event_name="checkpoint", status="ok", message=args.checkpoint, artifacts=[rel_to_workdir(wd, recovery_path(wd))])
+    report = {"schema": "lll.checkpoint.v1", "ok": True, "workdir": str(wd), "recovery_state": str(recovery_path(wd)), "active_tasks": active, "blocked_tasks": blocked, "event": obj}
+    if args.json:
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    else:
+        print("checkpoint updated")
 
 
 def claim_next(workdir: Path, owner: str) -> dict[str, Any] | None:
@@ -754,12 +764,12 @@ def maybe_commit(task: dict[str, Any], cwd: Path) -> str | None:
     return git_output(["rev-parse", "--short", "HEAD"], cwd)
 
 
-def run_once(workdir: Path, *, owner: str | None = None) -> int:
+def run_once(workdir: Path, *, owner: str | None = None) -> tuple[int, dict[str, Any]]:
     owner = owner or f"lll-{os.getpid()}"
     task = claim_next(workdir, owner)
     if not task:
-        print("no claimable task")
-        return 0
+        report = {"schema": "lll.run.once.v1", "ok": True, "workdir": str(workdir), "owner": owner, "claimed": False, "message": "no claimable task", "exit_code": 0}
+        return 0, report
     run_id = "runner-run-" + datetime.now().strftime("%Y%m%d%H%M%S") + "-" + uuid.uuid4().hex[:6]
     td = workdir / ensure_safe_relative_out(workdir, task.get("out") or default_task_out(workdir, task["id"]), task["id"])
     run_dir = td / "artifacts" / run_id
@@ -783,23 +793,33 @@ def run_once(workdir: Path, *, owner: str | None = None) -> int:
         commit = maybe_commit(task, cwd) if success else None
         result_status = "succeeded" if success else ("failed_retryable" if int(task.get("attempts", 0)) < int(task.get("max_attempts", 1)) else "failed_terminal")
         result = {"run_id": run_id, "task_id": task["id"], "status": result_status, "exit_code": rc, "timed_out": timed_out, "verify_exit_code": verify_rc, "cwd": str(cwd), "branch": branch, "commit": commit, "updated_at": now()}
-        atomic_write(run_dir / "result.json", json.dumps(result, indent=2, ensure_ascii=False) + "\n")
+        result_path = run_dir / "result.json"
+        atomic_write(result_path, json.dumps(result, indent=2, ensure_ascii=False) + "\n")
         finish_handoff(workdir, task, run_dir, result_status, rc, verify_rc, "verified" if success else "failed")
         task = update_task(workdir, task, status=result_status, step="runner completed", error=None if success else f"exit={rc} verify={verify_rc} timeout={timed_out}")
-        event(workdir, task_id=task["id"], event_name="task_finished", status="ok" if success else "error", message=result_status, artifacts=[rel_to_workdir(workdir, run_dir / "result.json"), task.get("out", "") + "handoff.md"], exit_code=0 if success else rc, run_id=run_id)
-        return 0 if success else 1
-    except Exception as e:
+        finish_event = event(workdir, task_id=task["id"], event_name="task_finished", status="ok" if success else "error", message=result_status, artifacts=[rel_to_workdir(workdir, result_path), task.get("out", "") + "handoff.md"], exit_code=0 if success else rc, run_id=run_id)
+        exit_code = 0 if success else 1
+        report = {"schema": "lll.run.once.v1", "ok": success, "workdir": str(workdir), "owner": owner, "claimed": True, "task_id": task["id"], "run_id": run_id, "status": result_status, "result": result, "result_path": str(result_path), "handoff": str(td / "handoff.md"), "event": finish_event, "exit_code": exit_code}
+        return exit_code, report
+    except BaseException as e:
         result_status = "failed_retryable" if int(task.get("attempts", 0)) < int(task.get("max_attempts", 1)) else "failed_terminal"
-        atomic_write(run_dir / "result.json", json.dumps({"run_id": run_id, "task_id": task["id"], "status": result_status, "error": str(e), "updated_at": now()}, indent=2, ensure_ascii=False) + "\n")
+        result = {"run_id": run_id, "task_id": task["id"], "status": result_status, "error": str(e), "updated_at": now()}
+        result_path = run_dir / "result.json"
+        atomic_write(result_path, json.dumps(result, indent=2, ensure_ascii=False) + "\n")
         finish_handoff(workdir, task, run_dir, result_status, 1, None, str(e))
         update_task(workdir, task, status=result_status, step="runner exception", error=str(e))
-        event(workdir, task_id=task["id"], event_name="runner_exception", status="error", message=str(e), artifacts=[rel_to_workdir(workdir, run_dir / "result.json")], exit_code=1, run_id=run_id)
+        err_event = event(workdir, task_id=task["id"], event_name="runner_exception", status="error", message=str(e), artifacts=[rel_to_workdir(workdir, result_path)], exit_code=1, run_id=run_id)
         print(f"runner error: {e}", file=sys.stderr)
-        return 1
+        return 1, {"schema": "lll.run.once.v1", "ok": False, "workdir": str(workdir), "owner": owner, "claimed": True, "task_id": task["id"], "run_id": run_id, "status": result_status, "result": result, "result_path": str(result_path), "handoff": str(td / "handoff.md"), "event": err_event, "exit_code": 1}
 
 
 def cmd_run_once(args: argparse.Namespace) -> None:
-    raise SystemExit(run_once(Path(args.workdir).expanduser().resolve(), owner=args.owner))
+    rc, report = run_once(Path(args.workdir).expanduser().resolve(), owner=args.owner)
+    if args.json:
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    elif not report.get("claimed"):
+        print(report.get("message", "no claimable task"))
+    raise SystemExit(rc)
 
 
 def cmd_run_serve(args: argparse.Namespace) -> None:
@@ -807,10 +827,17 @@ def cmd_run_serve(args: argparse.Namespace) -> None:
         raise SystemExit("POC serve supports --max-concurrent 1 only")
     wd = Path(args.workdir).expanduser().resolve()
     i = 0
+    reports: list[dict[str, Any]] = []
+    rc = 0
     while True:
-        rc = run_once(wd, owner=args.owner or f"lll-serve-{os.getpid()}")
+        rc, report = run_once(wd, owner=args.owner or f"lll-serve-{os.getpid()}")
+        reports.append(report)
+        if not args.json and not report.get("claimed"):
+            print(report.get("message", "no claimable task"))
         i += 1
         if args.max_iterations and i >= args.max_iterations:
+            if args.json:
+                print(json.dumps({"schema": "lll.run.serve.v1", "ok": rc == 0, "workdir": str(wd), "iterations": i, "runs": reports, "exit_code": rc}, indent=2, ensure_ascii=False))
             raise SystemExit(rc)
         time.sleep(args.interval)
 
@@ -833,11 +860,16 @@ def cmd_run_reaper(args: argparse.Namespace) -> None:
                 t["updated_at"] = now()
                 changed.append(t["id"])
         save_tasks(wd, tasks)
+    events = []
     for tid in changed:
         task = next(t for t in load_tasks(wd) if t.get("id") == tid)
         update_local_status(wd, task, "reaped expired lease")
-        event(wd, task_id=tid, event_name="reaped", status="warning", message="expired lease")
-    print(f"reaped: {len(changed)}" + (" " + ", ".join(changed) if changed else ""))
+        events.append(event(wd, task_id=tid, event_name="reaped", status="warning", message="expired lease"))
+    report = {"schema": "lll.run.reaper.v1", "ok": True, "workdir": str(wd), "reaped": changed, "count": len(changed), "events": events}
+    if args.json:
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    else:
+        print(f"reaped: {len(changed)}" + (" " + ", ".join(changed) if changed else ""))
 
 
 def render_service(target: str, *, name: str, runner_bin: str, workdir: Path, interval: int) -> dict[str, str]:
@@ -923,7 +955,7 @@ def cmd_service_install(args: argparse.Namespace) -> None:
         if not args.no_enable:
             subprocess.run(["systemctl", "--user", "enable", "--now", f"lll-{name}.service"], check=False)
     if args.json:
-        print(json.dumps({"target": args.target, "files": written}, indent=2, ensure_ascii=False))
+        print(json.dumps({"schema": "lll.service.install.v1", "ok": True, "workdir": str(wd), "target": args.target, "name": name, "apply": bool(args.apply), "files": written}, indent=2, ensure_ascii=False))
     else:
         print("generated service files:")
         for p in written:
@@ -1005,14 +1037,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("status", help="show workdir status"); s.add_argument("workdir"); s.add_argument("--all", action="store_true"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_status)
     s = sub.add_parser("validate", help="validate a workdir"); s.add_argument("workdir"); s.add_argument("--mode", choices=["auto", "full", "lite"], default="auto"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_validate)
-    s = sub.add_parser("event", help="append an event"); s.add_argument("workdir"); s.add_argument("--task-id"); s.add_argument("--event", required=True); s.add_argument("--status", default="info"); s.add_argument("--message", default=""); s.add_argument("--artifact", action="append", default=[]); s.add_argument("--carrier", default="lll"); s.add_argument("--actor", default="lll"); s.set_defaults(func=cmd_event)
-    s = sub.add_parser("checkpoint", help="rewrite recovery-state.md"); s.add_argument("workdir"); s.add_argument("--status", default="active"); s.add_argument("--phase", default="working"); s.add_argument("--checkpoint", default="manual_checkpoint"); s.add_argument("--next-action", default="continue next task"); s.add_argument("--running", default=""); s.set_defaults(func=cmd_checkpoint)
+    s = sub.add_parser("event", help="append an event"); s.add_argument("workdir"); s.add_argument("--task-id"); s.add_argument("--event", required=True); s.add_argument("--status", default="info"); s.add_argument("--message", default=""); s.add_argument("--artifact", action="append", default=[]); s.add_argument("--carrier", default="lll"); s.add_argument("--actor", default="lll"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_event)
+    s = sub.add_parser("checkpoint", help="rewrite recovery-state.md"); s.add_argument("workdir"); s.add_argument("--status", default="active"); s.add_argument("--phase", default="working"); s.add_argument("--checkpoint", default="manual_checkpoint"); s.add_argument("--next-action", default="continue next task"); s.add_argument("--running", default=""); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_checkpoint)
 
     r = sub.add_parser("run", help="runner commands")
     rsub = r.add_subparsers(dest="run_cmd", required=True)
-    ro = rsub.add_parser("once", help="claim and run one task"); ro.add_argument("workdir"); ro.add_argument("--owner"); ro.set_defaults(func=cmd_run_once)
-    rs = rsub.add_parser("serve", help="loop over run once"); rs.add_argument("workdir"); rs.add_argument("--interval", type=int, default=300); rs.add_argument("--max-concurrent", type=int, default=1); rs.add_argument("--max-iterations", type=int, default=0); rs.add_argument("--owner"); rs.set_defaults(func=cmd_run_serve)
-    rr = rsub.add_parser("reaper", help="reap expired leases"); rr.add_argument("workdir"); rr.set_defaults(func=cmd_run_reaper)
+    ro = rsub.add_parser("once", help="claim and run one task"); ro.add_argument("workdir"); ro.add_argument("--owner"); ro.add_argument("--json", action="store_true"); ro.set_defaults(func=cmd_run_once)
+    rs = rsub.add_parser("serve", help="loop over run once"); rs.add_argument("workdir"); rs.add_argument("--interval", type=int, default=300); rs.add_argument("--max-concurrent", type=int, default=1); rs.add_argument("--max-iterations", type=int, default=0); rs.add_argument("--owner"); rs.add_argument("--json", action="store_true"); rs.set_defaults(func=cmd_run_serve)
+    rr = rsub.add_parser("reaper", help="reap expired leases"); rr.add_argument("workdir"); rr.add_argument("--json", action="store_true"); rr.set_defaults(func=cmd_run_reaper)
 
     sv = sub.add_parser("service", help="generate service wrappers")
     svsub = sv.add_subparsers(dest="service_cmd", required=True)

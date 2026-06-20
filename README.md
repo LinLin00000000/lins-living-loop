@@ -113,10 +113,13 @@ aios lll doctor --json
   --preset code-loop \
   --command "printf ok > marker.txt" \
   --verify "test -f marker.txt"
-./lll status ~/lll-work/20260608-150000_demo --all
-./lll validate ~/lll-work/20260608-150000_demo
-./lll run once ~/lll-work/20260608-150000_demo
-./lll service install ~/lll-work/20260608-150000_demo --target systemd --user
+./lll status ~/lll-work/20260608-150000_demo --json
+./lll validate ~/lll-work/20260608-150000_demo --json
+./lll run once ~/lll-work/20260608-150000_demo --json
+./lll event ~/lll-work/20260608-150000_demo --event note --message "agent checkpoint" --json
+./lll checkpoint ~/lll-work/20260608-150000_demo --checkpoint "safe point" --json
+./lll run reaper ~/lll-work/20260608-150000_demo --json
+./lll service install ~/lll-work/20260608-150000_demo --target systemd --user --json
 ```
 
 也可以安装为 Python console script（仍然只有标准库运行依赖）：

@@ -59,7 +59,7 @@ Default behavior:
 2. Discover readiness with `lll --version`, `lll doctor --json`, and in AIOS environments `aios lll doctor --json` before starting long unattended work.
 3. Keep LLL as the protocol: create or reuse a normal LLL workdir with `mission.md` and `internal/` state.
 4. Compile the coding objective into one or more `code-loop` tasks with explicit `--command`, `--verify`, safety boundary, repo/cwd, max attempts, and delivery policy.
-5. Prefer the independent `lll` CLI reference implementation for machine lifecycle: `lll task add`, `lll run once`, `lll run serve`, `lll run reaper`, and `lll service install`.
+5. Prefer the independent `lll` CLI reference implementation for machine lifecycle. For Agent-first parsing, use JSON forms where available: `lll task add --json`, `lll run once --json`, `lll run serve --json --max-iterations N`, `lll run reaper --json`, `lll event --json`, `lll checkpoint --json`, and `lll service install --json`.
 6. Let the runner manage lease/timeout/retry/artifacts/status; let Hermes or another agent remain responsible for judgment, synthesis, validation, and user-facing handoff.
 7. In AIOS environments, `aios lll ...` may discover/proxy LLL workdirs and check module health, but it must not duplicate the LLL state machine.
 

@@ -39,29 +39,44 @@ class LLLCliSmokeTests(unittest.TestCase):
             data = json.loads(cp.stdout)
             self.assertEqual(data["counts"].get("pending"), 1)
             run("validate", str(wd))
-            rc = run("run", "once", str(wd))
+            rc = run("run", "once", str(wd), "--json")
             self.assertEqual(rc.returncode, 0)
+            run_report = json.loads(rc.stdout)
+            self.assertEqual(run_report["schema"], "lll.run.once.v1")
+            self.assertTrue(run_report["ok"])
+            self.assertTrue(run_report["claimed"])
+            self.assertEqual(run_report["status"], "succeeded")
             data = json.loads(run("status", str(wd), "--json").stdout)
             self.assertEqual(data["counts"].get("succeeded"), 1)
             artifacts = list((wd / "internal" / "agents" / "T001" / "artifacts").glob("runner-run-*/result.json"))
             self.assertTrue(artifacts)
+            event_report = json.loads(run("event", str(wd), "--event", "note", "--message", "json", "--json").stdout)
+            self.assertEqual(event_report["schema"], "lll.event.v1")
+            checkpoint_report = json.loads(run("checkpoint", str(wd), "--checkpoint", "smoke", "--json").stdout)
+            self.assertEqual(checkpoint_report["schema"], "lll.checkpoint.v1")
 
     def test_failed_task_and_reaper(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             wd = Path(td) / "work"
             run("init", str(wd), "--objective", "fail")
             run("task", "add", str(wd), "--title", "bad", "--goal", "fail", "--command", "exit 7", "--max-attempts", "1")
-            cp = run("run", "once", str(wd), check=False)
+            cp = run("run", "once", str(wd), "--json", check=False)
             self.assertNotEqual(cp.returncode, 0)
+            fail_report = json.loads(cp.stdout)
+            self.assertEqual(fail_report["schema"], "lll.run.once.v1")
+            self.assertFalse(fail_report["ok"])
+            self.assertEqual(fail_report["status"], "failed_terminal")
             data = json.loads(run("status", str(wd), "--json").stdout)
             self.assertEqual(data["counts"].get("failed_terminal"), 1)
-            run("run", "reaper", str(wd))
+            reaper_report = json.loads(run("run", "reaper", str(wd), "--json").stdout)
+            self.assertEqual(reaper_report["schema"], "lll.run.reaper.v1")
 
     def test_service_render(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             wd = Path(td) / "work"
             run("init", str(wd), "--objective", "svc")
-            run("service", "install", str(wd), "--target", "systemd", "--user")
+            systemd_report = json.loads(run("service", "install", str(wd), "--target", "systemd", "--user", "--json").stdout)
+            self.assertEqual(systemd_report["schema"], "lll.service.install.v1")
             run("service", "install", str(wd), "--target", "launchd")
             run("service", "install", str(wd), "--target", "windows-task")
             service_dir = wd / "internal" / "service"
