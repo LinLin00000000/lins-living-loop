@@ -8,7 +8,7 @@
 
 A filesystem-backed living loop for long-running tasks.
 
-LLL was originally called DOP (Deep Orchestration Protocol). The rename is not about making the tool sound more mystical, but about describing how it is actually used: work should not live only in a chat window. Chats get interrupted, models change, APIs act up, and context overflows. Truly reliable state should be written to files.
+LLL was formerly called DOP (Deep Orchestration Protocol). The rename is not meant to make the tool sound more mystical, but to describe how it is actually used: work should not live only inside a chat window. Chats get interrupted, models change, APIs glitch, and context windows overflow. Truly reliable state should be written to files.
 
 ```text
 The filesystem is where the work lives.
@@ -16,21 +16,21 @@ The chat is only the current interface.
 The agent is the caretaker of the next loop.
 ```
 
-LLL moves the main conversation into the supervisor role and puts tasks, evidence, deliverables, errors, and recovery state into a readable, auditable, resumable work directory. It is not LangGraph, not Temporal, and not a new agent platform. It is more like a work discipline in the small-tools philosophy: first solve 90% of durability problems with ordinary files, and only upgrade to a runner, board, or heavier orchestration system when genuinely needed.
+LLL moves the main conversation into a supervisor role, and puts tasks, evidence, deliverables, errors, and recovery state into a readable, auditable, continuable working directory. It is not LangGraph, not Temporal, and not a new agent platform. It is closer to a small-tools discipline: solve 90% of durability problems with ordinary files first, and only upgrade to a runner, board, or heavier orchestration system when truly needed.
 
 ## What it is for
 
-Suitable for:
+Good fit:
 
 - Deep research, long-form writing, complex technology selection, code refactoring, audits, and validation.
-- Tasks that may overflow context, time out, require multiple rounds of recovery, or already have a large, drift-prone context.
-- Tasks requiring collaboration among multiple workers / subagents / scripts / independent agent CLIs.
+- Tasks that may overflow context, time out, require multiple rounds of recovery, or already have a large, drift-prone current context.
+- Tasks that need collaboration among multiple workers / subagents / scripts / independent agent CLIs.
 - Tasks that need to separate process, evidence, errors, and final conclusions.
-- Tasks where the user may later say “continue that previous one.”
+- Tasks where the user may later say “continue that thing from last time.”
 
-Not suitable for: simple Q&A, small tasks that can be completed with one or two tool calls, or temporary operations that do not require recovery/auditing.
+Not a good fit: simple Q&A, small tasks that can be completed with one or two tool calls, or temporary operations that do not need recovery/audit.
 
-If unsure, use LLL Lite: create a very small workdir, write `mission.md`, `notes.md`, or a root-level deliverable, and do not start a complex runner. When the context is large, first externalize the goal, constraints, decisions, current state, and acceptance criteria into files, then continue execution.
+If unsure, use LLL Lite: create a very small workdir, write `mission.md`, `notes.md`, or a root-level deliverable, and do not start a complex runner. When the context is large, first externalize the objective, constraints, decisions, current state, and acceptance criteria into files, then continue working.
 
 ## Default work directory
 
@@ -45,9 +45,9 @@ Core structure:
 ```text
 <lll-workdir>/
   mission.md
-  <task-specific-name>.md     # Optional: human-readable deliverable named according to the task
-  <another-topic>.md          # Optional: split out when content is large or topics are independent
-  notes.md                   # Optional: Lite work notes
+  <task-specific-name>.md     # Optional: human-readable deliverable named by task content
+  <another-topic>.md          # Optional: split only when content is large / topics are independent
+  notes.md                   # Optional: Lite working notes
   internal/
     tasks.jsonl
     runs.jsonl
@@ -67,7 +67,7 @@ Core structure:
       artifacts/
 ```
 
-New workspaces no longer create `output/`, `00-index.md`, or a separate `99-next-steps.md`. Human-readable deliverables are placed directly in the root directory; next steps are written into the main report or related deliverable; traceability reports and error reports are now `internal/*.jsonl`, making them easier to append and validate.
+New workspaces no longer create `output/`, `00-index.md`, or a separate `99-next-steps.md`. Human-readable deliverables go directly in the root directory; next steps are written into the main report or related deliverable; traceability and error reports are now `internal/*.jsonl` for easier appending and validation.
 
 ## How this loop runs
 
@@ -75,7 +75,7 @@ New workspaces no longer create `output/`, `00-index.md`, or a separate `99-next
 Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 ```
 
-| Phase | File action |
+| Stage | File action |
 |---|---|
 | Seed | Write or update `mission.md` |
 | Split | Split into `internal/tasks.jsonl` and worker `task.md` |
@@ -88,17 +88,17 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 
 ## Name and slug
 
-The display name is **Lin's Living Loop / LLL**. The repository and skill slug use `lins-living-loop` to keep URLs, shell commands, installation commands, and registry search stable; an apostrophe must be escaped on the command line and is not suitable as a package name.
+The display name is **Lin's Living Loop / LLL**. The repository and skill slug use `lins-living-loop` to keep URLs, shell usage, installation commands, and registry search stable; apostrophes need escaping on the command line and are not suitable for package names.
 
-The recommended long-term source directory is `~/projects/lins-living-loop`. `~/lll-work/` should contain only the work records from individual LLL runs, and should not be used as the project source repository.
+The recommended long-term source directory is `~/projects/lins-living-loop`. `~/lll-work/` should only contain work records from individual LLL runs, and should not be used as the project source repository.
 
 ## `lll` CLI
 
 `lll` is the stdlib reference implementation of the LLL file protocol: it handles initialization, task queues, status/validation, runner, reaper, and service wrapper generation; it is not a planning brain, Web UI, or platform.
 
-LLL’s default user is the Agent, not a human terminal user: humans usually only provide the goal and acceptance criteria, while the Agent is responsible for discovering `lll`/`aios lll`, creating the workspace, writing tasks, running the runner, reading artifacts, fixing failures, and closing out. The commands in this README are primarily an Agent operations manual and a human fallback for edge cases; humans are not expected to understand or type them one by one.
+LLL’s default user is an Agent, not a human terminal user: humans usually only provide goals and acceptance criteria, while the Agent is responsible for discovering `lll`/`aios lll`, creating the workspace, writing tasks, running the runner, reading artifacts, fixing failures, and wrapping up. The commands in this README are mainly an Agent operations manual and a human fallback for edge cases; humans are not expected to understand or type them one by one.
 
-Agent-first health-check entry points:
+Agent-first health check entry points:
 
 ```bash
 lll --version
@@ -133,19 +133,19 @@ python3 -m pip install .
 lll --help
 ```
 
-`scripts/lll.py` is now kept as a compatibility shim and forwards to `src/lll_cli`; the old commands `add-task` / `set-status` are still available, but new documentation prefers `task add` / `task set-status`. The old name `scripts/dop.py` is also kept as a compatibility entry point and forwards to `lll.py`. Existing `~/dop-work/` workspaces can still be read and do not require forced migration.
+`scripts/lll.py` is now kept as a compatibility shim and forwards to `src/lll_cli`; the old commands `add-task` / `set-status` are still available, but the new documentation prefers `task add` / `task set-status`. The old name `scripts/dop.py` is also kept as a compatibility entry point and forwards to `lll.py`. Old `~/dop-work/` workspaces can also still be read; migration is not forced.
 
 ### Code Loop / Runner boundaries
 
-- The `shell` executor is the default MVP executor, used for core smoke tests, bootstrapping, and local script-style tasks.
+- The `shell` executor is the MVP default executor, used for self smoke tests, bootstrapping, and local script-style tasks.
 - The runner writes to `internal/agents/<task-id>/artifacts/runner-run-<run-id>/`, and the verify command determines whether it is `succeeded`.
-- `serve` and `reaper` provide continuous execution and expired lease recovery; the default remains single-machine, single-concurrency, file-based state.
-- The service subcommand generates systemd/launchd/Windows Task Scheduler wrapper files by default; it attempts to install a systemd user service only when `--apply` is explicitly provided.
-- AIOS can discover/proxy LLL through `aios lll ...`, but it does not own the LLL state machine.
+- `serve` and `reaper` provide continuous execution and expired lease recovery; by default they remain single-machine, single-concurrency, file-state based.
+- The service subcommand generates systemd/launchd/Windows Task Scheduler wrapper files by default; it only attempts to install a systemd user service when `--apply` is explicitly provided.
+- AIOS can discover/proxy LLL through `aios lll ...`, but does not own the LLL state machine.
 
 ## Installation
 
-Through Skills CLI:
+Via Skills CLI:
 
 ```bash
 npx skills add LinLin00000000/lins-living-loop -g -y
@@ -157,7 +157,7 @@ Or clone directly:
 git clone https://github.com/LinLin00000000/lins-living-loop.git
 ```
 
-In Hermes, if it has already been installed as a skill, saying “use LLL” / “用 Lin's Living Loop” / “用 DOP” in a task should trigger the same workflow through all three entry points.
+In Hermes, if it has already been installed as a skill, saying “use LLL” / “用 Lin's Living Loop” / “用 DOP” in a task should trigger the same workflow.
 
 ## Design boundaries
 
@@ -169,4 +169,4 @@ LLL’s underlying logic remains reliability-first:
 - independent validation before delivery
 - root deliverables, internal state
 
-Living is not decoration; it is a work discipline: every caretaker should leave the work healthier, more traceable, and easier to continue than when they received it.
+Living is not decoration, but a work discipline: every caretaker should leave the work healthier, more traceable, and easier to continue than when they received it.
