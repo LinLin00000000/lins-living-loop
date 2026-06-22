@@ -55,6 +55,20 @@ class LLLCliSmokeTests(unittest.TestCase):
             checkpoint_report = json.loads(run("checkpoint", str(wd), "--checkpoint", "smoke", "--json").stdout)
             self.assertEqual(checkpoint_report["schema"], "lll.checkpoint.v1")
 
+    def test_task_add_accepts_and_records_carrier(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wd = Path(td) / "work"
+            run("init", str(wd), "--objective", "carrier")
+            run("task", "add", str(wd), "--title", "demo", "--goal", "goal", "--carrier", "agent_cli")
+            data = json.loads(run("status", str(wd), "--json").stdout)
+            task = data["tasks"][0]
+            self.assertEqual(task["carrier"], "agent_cli")
+            task_file = (wd / "internal" / "agents" / "T001" / "task.md").read_text(encoding="utf-8")
+            self.assertIn("carrier: agent_cli", task_file)
+            events = [json.loads(line) for line in (wd / "internal" / "runs.jsonl").read_text(encoding="utf-8").splitlines() if line]
+            queued = [e for e in events if e.get("event") == "queued"][-1]
+            self.assertEqual(queued["carrier"], "agent_cli")
+
     def test_failed_task_and_reaper(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             wd = Path(td) / "work"

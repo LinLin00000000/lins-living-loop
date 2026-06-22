@@ -430,7 +430,7 @@ def cmd_task_add(args: argparse.Namespace) -> None:
             raise SystemExit(f"Task already exists: {tid}")
         task = {
             "id": tid, "title": args.title, "status": "pending", "priority": args.priority,
-            "depends_on": normalize_depends(args.depends_on), "carrier": "lll", "preset": args.preset,
+            "depends_on": normalize_depends(args.depends_on), "carrier": args.carrier, "preset": args.preset,
             "attempts": 0, "max_attempts": args.max_attempts,
             "out": ensure_safe_relative_out(wd, args.out or default_task_out(wd, tid), tid),
             "goal": args.goal, "acceptance": args.acceptance or ["runner handoff written"],
@@ -446,7 +446,7 @@ def cmd_task_add(args: argparse.Namespace) -> None:
         tasks.sort(key=lambda t: (-int(t.get("priority", 0)), str(t.get("id", ""))))
         save_tasks(wd, tasks)
     write_task_files(wd, task)
-    event(wd, task_id=tid, event_name="queued", status="ok", message=args.title, artifacts=[task["out"] + "task.md"])
+    event(wd, task_id=tid, event_name="queued", status="ok", message=args.title, artifacts=[task["out"] + "task.md"], carrier=args.carrier)
     if args.json:
         print(json.dumps(task, indent=2, ensure_ascii=False))
     else:
@@ -1031,7 +1031,7 @@ def build_parser() -> argparse.ArgumentParser:
     task = sub.add_parser("task", help="manage tasks")
     tsub = task.add_subparsers(dest="task_cmd", required=True)
     a = tsub.add_parser("add", help="add a task")
-    a.add_argument("workdir"); a.add_argument("--id"); a.add_argument("--title", required=True); a.add_argument("--goal", required=True); a.add_argument("--preset", default="manual"); a.add_argument("--priority", type=int, default=10); a.add_argument("--depends-on", action="append", default=[]); a.add_argument("--acceptance", action="append", default=[]); a.add_argument("--inputs", action="append", default=[]); a.add_argument("--executor", default="shell", choices=["shell"]); a.add_argument("--command"); a.add_argument("--verify"); a.add_argument("--timeout", type=int, default=3600); a.add_argument("--lease-ttl", type=int); a.add_argument("--max-attempts", type=int, default=2); a.add_argument("--repo"); a.add_argument("--cwd"); a.add_argument("--use-worktree", dest="use_worktree", action="store_true", default=None); a.add_argument("--no-worktree", dest="use_worktree", action="store_false"); a.add_argument("--delivery", choices=["handoff", "local-commit"], default="handoff"); a.add_argument("--out", default=""); a.add_argument("--json", action="store_true"); a.set_defaults(func=cmd_task_add)
+    a.add_argument("workdir"); a.add_argument("--id"); a.add_argument("--title", required=True); a.add_argument("--goal", required=True); a.add_argument("--carrier", default="lll"); a.add_argument("--preset", default="manual"); a.add_argument("--priority", type=int, default=10); a.add_argument("--depends-on", action="append", default=[]); a.add_argument("--acceptance", action="append", default=[]); a.add_argument("--inputs", action="append", default=[]); a.add_argument("--executor", default="shell", choices=["shell"]); a.add_argument("--command"); a.add_argument("--verify"); a.add_argument("--timeout", type=int, default=3600); a.add_argument("--lease-ttl", type=int); a.add_argument("--max-attempts", type=int, default=2); a.add_argument("--repo"); a.add_argument("--cwd"); a.add_argument("--use-worktree", dest="use_worktree", action="store_true", default=None); a.add_argument("--no-worktree", dest="use_worktree", action="store_false"); a.add_argument("--delivery", choices=["handoff", "local-commit"], default="handoff"); a.add_argument("--out", default=""); a.add_argument("--json", action="store_true"); a.set_defaults(func=cmd_task_add)
     l = tsub.add_parser("list", help="list tasks"); l.add_argument("workdir"); l.add_argument("--all", action="store_true"); l.add_argument("--json", action="store_true"); l.set_defaults(func=cmd_task_list)
     ss = tsub.add_parser("set-status", help="set task status"); ss.add_argument("workdir"); ss.add_argument("id"); ss.add_argument("status"); ss.add_argument("--note", default=""); ss.add_argument("--error"); ss.add_argument("--json", action="store_true"); ss.set_defaults(func=cmd_task_set_status)
 
