@@ -1,6 +1,6 @@
 # Lin's Living Loop / LLL
 
-[中文](README.md) | [English](translations/en/README.md)
+**简体中文** | [English](./translations/en/README.md)
 
 一个给长任务用的、文件系统承载的 living loop。
 
