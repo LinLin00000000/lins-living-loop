@@ -11,7 +11,7 @@ Recommended public naming stack, pending explicit final approval:
 ```text
 Lin's Living Loop / LLL
 A tiny file-backed living loop for durable AI-agent work.
-Formerly LLL — Lin's Living Loop.
+Formerly DOP — Deep Orchestration Protocol.
 ```
 
 ## Workflow rule for rename/rebrand work
@@ -19,7 +19,7 @@ Formerly LLL — Lin's Living Loop.
 If the user asks for rename analysis, a theme migration plan, README wording, template changes, or GitHub packaging strategy but says not to modify the skill yet, do not patch the live skill. Create a fresh draft workspace instead. For LLL-specific drafts, prefer:
 
 ```text
-~/lll-work/<timestamp>_<slug>/
+~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case/
 ```
 
 Keep old `~/dop-work/` directories resumable and do not bulk-rename old workdirs unless the user explicitly asks for migration.

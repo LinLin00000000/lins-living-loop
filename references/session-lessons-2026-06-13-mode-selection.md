@@ -40,18 +40,20 @@ If runtime concurrency is limited, batch subject workers or use independent agen
 
 ## LLL Lite rule
 
-For light or medium single-track tasks, LLL Lite is acceptable and often better. But Lite should look light:
+For light or medium single-track tasks, LLL Lite is acceptable and often better. But Lite should look light, following the current compact layout:
 
 ```text
 <lll-workdir>/
   mission.md
-  notes.md
-  output/
-    00-index.md
-    01-<deliverable>.md
+  notes.md                 # optional compact working notes
+  <task-specific-name>.md  # optional human-facing deliverable at the root
+  internal/
+    validation-report.md   # optional for nontrivial checks
+    traceability.jsonl     # optional when claims need traceability
+    error-report.jsonl     # optional unless a workflow/runtime issue occurs
 ```
 
-Add audit/trace/validation files only when useful. Do not create ornate `internal/agents/` trees or fake Agent 1/2/3 records when the supervisor did the work inline.
+Add audit/trace/validation files only when useful. Do not create `output/`, index files, standalone next-step files, ornate `internal/agents/` trees, or fake Agent 1/2/3 records when the supervisor did the work inline.
 
 ## Helper/tooling caveat
 

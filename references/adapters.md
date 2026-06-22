@@ -69,9 +69,9 @@ Typical prompt contract:
 
 ```text
 You may not have loaded the LLL skill, so follow this compact protocol.
-Read mission.md and your agents/<task-id>/task.md.
+Read `mission.md` and your `internal/agents/<task-id>/task.md`.
 Treat the workdir as the source of truth; chat is only a short handoff.
-Write detailed work/logs/evidence under agents/<task-id>/.
+Write detailed work/logs/evidence under `internal/agents/<task-id>/`.
 Do not edit shared state files unless explicitly granted a lock/runner API.
 Write internal/agents/<task-id>/handoff.md (or the detected legacy worker handoff) with status, output paths, key findings, risks/blockers, and next step.
 Keep claims traceable to artifacts, sources, commands, or validation notes.
@@ -91,12 +91,12 @@ Use for deterministic commands under a few minutes: parsing, transforms, tests, 
 Generic example:
 
 ```bash
-python scripts/check_sources.py --in agents/T010/artifacts/raw.jsonl --out agents/T010/artifacts/report.json
+python scripts/check_sources.py --in internal/agents/T010/artifacts/raw.jsonl --out internal/agents/T010/artifacts/report.json
 ```
 
 Rules:
 - Write outputs under the task area or assigned deliverable path.
-- Capture command, exit code, and key output in `agents/<task-id>/log.txt`.
+- Capture command, exit code, and key output in `internal/agents/<task-id>/log.txt`.
 - Do not stream huge stdout into the supervisor context.
 
 Fallbacks:
@@ -110,9 +110,9 @@ Use for long but bounded commands: crawls, benchmarks, OCR, builds, large tests,
 Generic shell example:
 
 ```bash
-python scripts/deep_research.py --topic digital-twin --out agents/T010/artifacts/raw.jsonl \
-  > agents/T010/log.txt 2>&1 &
-echo $! > agents/T010/pid.txt
+python scripts/deep_research.py --topic digital-twin --out internal/agents/T010/artifacts/raw.jsonl \
+  > internal/agents/T010/log.txt 2>&1 &
+echo $! > internal/agents/T010/pid.txt
 ```
 
 Prefer a managed process API when available because it gives status/log/cancel semantics.
@@ -121,8 +121,8 @@ Hermes example:
 
 ```python
 terminal(
-  command="python scripts/deep_research.py --topic digital-twin --out agents/T010/artifacts/raw.jsonl",
-  workdir="<dop-workdir>",
+  command="python scripts/deep_research.py --topic digital-twin --out internal/agents/T010/artifacts/raw.jsonl",
+  workdir="<lll-workdir>",
   background=True,
   notify_on_complete=True,
 )
@@ -157,8 +157,8 @@ Rules:
 Hermes example:
 
 ```bash
-hermes chat -q "$(cat agents/T020/task.md)" \
-  > agents/T020/log.txt 2>&1
+hermes chat -q "$(cat internal/agents/T020/task.md)" \
+  > internal/agents/T020/log.txt 2>&1
 ```
 
 Fallbacks:
@@ -186,10 +186,10 @@ repo: <path>
 worktree: <optional path>
 ```
 
-This user's example mapping:
-- Codex is the user's default coding carrier when available.
+Example coding carrier mapping:
+- Use the locally configured coding agent when available.
 - Do not spend LLL effort comparing coding agents unless the user asks for tool selection.
-- If Codex is unavailable, use a smaller current-agent edit, another configured code-capable agent, or split into a non-coding plan plus manual/agent implementation.
+- If the preferred coding agent is unavailable, use a smaller current-agent edit, another configured code-capable agent, or split into a non-coding plan plus manual/agent implementation.
 
 Fallbacks:
 - Tests fail: log command/output, create follow-up task, and do not hide failures.
@@ -233,7 +233,7 @@ Generic rules:
 - Treat the board as an adapter to LLL, not a replacement for task artifacts and handoffs.
 
 Hermes example:
-- Hermes Kanban is this adapter when multi-profile collaboration is configured.
+- A Kanban/board integration is this adapter when multi-agent or human collaboration needs an external coordination surface.
 
 Fallbacks:
 - No configured worker profiles: continue with `tasks.jsonl` or a thin file-backed runner.

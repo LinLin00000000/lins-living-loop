@@ -46,9 +46,10 @@ LLL has two orthogonal decisions:
 | axis | choices | answers |
 |---|---|---|
 | Structure mode | no LLL, LLL Lite, full LLL | How much durable workspace, state, validation, and recovery surface is needed? |
-| Carrier / adapter | current supervisor, subagent, script, background process, independent agent CLI, scheduler, thin runner, Kanban/board | What actually executes each unit of work? |
+| Loop preset | none, Code Loop | Is the task a repeated develop/run/verify/fix loop that needs lease/retry/checkpoint semantics? |
+| Carrier / adapter | inline supervisor, delegated worker, command/job, runner/orchestrator | What actually executes each unit of work in this environment? |
 
-Choose the structure mode first, then the lightest reliable carrier.
+Choose the structure mode first, add Code Loop only when the work is truly iterative, then choose the lightest reliable carrier. Code Loop is not a fourth structure mode; it is a runner-oriented preset layered on an LLL workdir.
 
 ## Code Loop mode
 
@@ -56,12 +57,12 @@ Use Code Loop mode when the user asks for continuous coding, long-running coding
 
 Default behavior:
 1. Assume the human delegates goals, constraints, and acceptance criteria; the Agent operates the CLI. Human-facing commands are fallback documentation, not the primary UX.
-2. Discover readiness with `lll --version`, `lll doctor --json`, and in AIOS environments `aios lll doctor --json` before starting long unattended work.
+2. Discover whether a reference LLL CLI or equivalent runner is available before starting long unattended work.
 3. Keep LLL as the protocol: create or reuse a normal LLL workdir with `mission.md` and `internal/` state.
 4. Compile the coding objective into one or more `code-loop` tasks with explicit `--command`, `--verify`, safety boundary, repo/cwd, max attempts, and delivery policy.
-5. Prefer the independent `lll` CLI reference implementation for machine lifecycle. For Agent-first parsing, use JSON forms where available: `lll task add --json`, `lll run once --json`, `lll run serve --json --max-iterations N`, `lll run reaper --json`, `lll event --json`, `lll checkpoint --json`, and `lll service install --json`.
-6. Let the runner manage lease/timeout/retry/artifacts/status; let Hermes or another agent remain responsible for judgment, synthesis, validation, and user-facing handoff.
-7. In AIOS environments, `aios lll ...` may discover/proxy LLL workdirs and check module health, but it must not duplicate the LLL state machine.
+5. Prefer the independent `lll` CLI reference implementation, or an equivalent file-backed runner, for machine lifecycle. For agent-first parsing, use JSON/status forms where available.
+6. Let the runner manage lease/timeout/retry/artifacts/status; let the supervising agent or human remain responsible for judgment, synthesis, validation, and user-facing handoff.
+7. Environment-specific wrappers may discover/proxy LLL workdirs and check module health, but they must not duplicate or own the LLL state machine.
 
 Boundary: the skill teaches agents when and how to use LLL/Code Loop; the CLI is the reference implementation; executors such as shell/Hermes/Claude/Codex are replaceable adapters. Do not turn the skill into the runtime or the CLI into a planning brain.
 
@@ -245,8 +246,8 @@ Empty done directories are a workflow error: repair them before final delivery a
 5. If the current context is large, first externalize the contract: objective, constraints, decisions, current status, next action, and validation criteria.
 6. Decompose into orthogonal tasks with explicit outputs and acceptance checks.
 7. Choose structure mode: no LLL, LLL Lite, or full LLL.
-8. Choose the lightest honest carrier for each task: inline supervisor, subagent, script, background process, independent CLI, scheduler, runner, or board.
-9. Launch work; make workers write files and return short handoffs. When multiple synchronous `delegate_task` workers are intended to run in parallel, submit them in one batch call via `delegate_task(tasks=[...])` instead of making sequential `delegate_task` calls. Sequential child calls are only acceptable when later tasks depend on earlier outputs, or when rate limits/tool constraints require serialization; otherwise record the reason in the handoff or error log.
+8. Choose the lightest honest carrier for each task: inline supervisor, delegated worker, command/job, or runner/orchestrator.
+9. Launch work; make workers write files and return short handoffs. When a runtime supports batching independent synchronous workers, launch independent tasks together instead of serializing them. Sequential child calls are only acceptable when later tasks depend on earlier outputs, or when rate limits/tool constraints require serialization; otherwise record the reason in the handoff or error log.
 10. Keep supervisor context small: read compact state and handoffs first; read raw artifacts only when needed.
 11. Synthesize into one or more root deliverables.
 12. Append traceability and error JSONL entries as needed.
@@ -270,17 +271,16 @@ Estimate coarsely from phase completion, not token use or elapsed time. Use roun
 
 ## Carrier escalation ladder
 
-| level | carrier | use when |
-|---|---|---|
-| 0 | current supervisor/runtime | planning, small edits, synthesis, quick validation |
-| 1 | synchronous subagent / short parallel worker | bounded parallel reasoning inside the current turn |
-| 2 | foreground script/command | deterministic commands under a few minutes |
-| 3 | managed background process/script | long bounded tests, crawls, builds, batch jobs |
-| 4 | independent agent CLI / specialist agent | long research, writing, coding, or analysis that can write durable files |
-| 5 | thin file-backed runner | many tasks need retries, leases, checkpoints, or reclaim |
-| 6 | durable board / DB / orchestration framework | long project, worker fleet, human interjection, strong durability |
+Keep the product-level carrier model small. Specific runtimes can map these buckets to their own tools.
 
-Do not default to LangGraph, Temporal, Celery, Kanban, a database, or a daemon. They are upgrade paths.
+| level | carrier bucket | use when |
+|---|---|---|
+| 0 | inline supervisor | planning, small edits, synthesis, quick validation |
+| 1 | delegated worker | bounded parallel research, critique, synthesis, validation, or specialist execution that can write durable files |
+| 2 | command/job | deterministic scripts, tests, crawls, builds, scheduled checks, or long bounded jobs |
+| 3 | runner/orchestrator | many tasks need leases, retries, checkpoints, recovery, human block/unblock, or long project coordination |
+
+Do not default to databases, daemons, boards, distributed workflow engines, or project-management systems. They are optional adapters inside the runner/orchestrator bucket, not core LLL concepts.
 
 ## Synthesis and validation
 
@@ -361,7 +361,7 @@ Do not paste huge reports into chat; put them in root deliverables.
 ## Resources
 
 Load only when needed:
-- `references/adapters.md`: concrete carriers, Hermes/Codex/terminal/cron/Kanban examples, and fallbacks.
+- `references/adapters.md`: concrete carrier mappings, runtime-specific examples, and fallbacks.
 - `references/minimal-runner.md`: helper vs runner, task/event schemas, current layout, single-writer rules, validation, and compatibility stance.
 - `references/observability-recovery.md`: logging, recovery, validation failure loop, and JSONL error/trace records.
 - `references/validator-pass-patterns.md`: validator-only boundaries, PASS_WITH_NOTES patterns, safe environment/secret checks, and concise validation handoff shape.

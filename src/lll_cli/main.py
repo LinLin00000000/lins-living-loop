@@ -40,6 +40,11 @@ ACTIVE_STATUS = {"leased", "running", "verifying", "in_progress"}
 LAYOUT_CURRENT = "current_internal_root_outputs"
 LAYOUT_LEGACY = "legacy_or_transitional"
 RECOMMENDED_WORKDIR_PATTERN = "~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case/"
+DEFAULT_WORK_ROOT = Path("~/lll-work").expanduser()
+WORKDIR_NAME_RE = re.compile(r"^\d{8}-\d{6}_[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
+SUPPORTED_CARRIERS = ["lll", "inline_supervisor", "delegated_worker", "command_job", "runner_orchestrator", "agent_cli", "code_agent", "scheduler", "board"]
+SUPPORTED_EXECUTORS = ["shell"]
+DEFAULT_PRESETS = ["manual", "script", "code-loop", "fast-research", "deep-research", "critic", "code", "code-heavy"]
 
 
 def now() -> str:
@@ -208,6 +213,91 @@ def write_config(workdir: Path, cfg: dict[str, Any]) -> None:
     cfg.setdefault("schema", "lll.config.v1")
     cfg["updated_at"] = now()
     atomic_write(config_path(workdir), json.dumps(cfg, indent=2, ensure_ascii=False) + "\n")
+
+
+def json_envelope(schema: str, ok: bool, **fields: Any) -> dict[str, Any]:
+    report: dict[str, Any] = {"schema": schema, "ok": ok}
+    report.update(fields)
+    return report
+
+
+def print_json(report: dict[str, Any]) -> None:
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+
+
+def workdir_name_report(workdir: Path) -> dict[str, Any]:
+    name = workdir.name
+    report: dict[str, Any] = {
+        "name": name,
+        "ok": bool(WORKDIR_NAME_RE.fullmatch(name)),
+        "recommended_pattern": RECOMMENDED_WORKDIR_PATTERN,
+        "reason": "ok",
+        "suggested_name": None,
+    }
+    if report["ok"]:
+        return report
+    if re.fullmatch(r"\d{8}_\d{6}_.+", name):
+        report["reason"] = "legacy_underscore_timestamp"
+        report["suggested_name"] = re.sub(r"^(\d{8})_(\d{6})_", r"\1-\2_", name)
+    elif re.fullmatch(r"\d{8}-\d{6}-.+", name):
+        report["reason"] = "wrong_separator_after_time"
+        report["suggested_name"] = re.sub(r"^(\d{8}-\d{6})-", r"\1_", name)
+    elif re.fullmatch(r"\d{8}-.+", name):
+        report["reason"] = "date_only_missing_time"
+        slug = name[9:]
+        created = read_mission_created_at(workdir)
+        if created:
+            report["suggested_name"] = created.strftime("%Y%m%d-%H%M%S") + "_" + slug
+    else:
+        report["reason"] = "non_recommended"
+    return report
+
+
+def read_mission_created_at(workdir: Path) -> datetime | None:
+    p = workdir / "mission.md"
+    if not p.exists():
+        return None
+    try:
+        text = p.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    m = re.search(r"^created_at:\s*(\S+)", text, flags=re.MULTILINE)
+    return parse_ts(m.group(1)) if m else None
+
+
+def capabilities_report() -> dict[str, Any]:
+    return {
+        "json_envelope": True,
+        "standalone": True,
+        "stdlib_only_runtime": True,
+        "layouts": [LAYOUT_CURRENT, LAYOUT_LEGACY],
+        "workdir": {
+            "recommended_pattern": RECOMMENDED_WORKDIR_PATTERN,
+            "name_validation": True,
+            "strict_name_flag": "--strict-name",
+        },
+        "commands": {
+            "init": {"json_schema": "lll.init.v1"},
+            "task.add": {"json_schema": "lll.task.add.v1"},
+            "task.list": {"json_schema": "lll.task.list.v1"},
+            "task.set_status": {"json_schema": "lll.task.set_status.v1"},
+            "status": {"json_schema": "lll.status.v1"},
+            "validate": {"json_schema": "lll.validate.v1"},
+            "event": {"json_schema": "lll.event.v1"},
+            "checkpoint": {"json_schema": "lll.checkpoint.v1"},
+            "run.once": {"json_schema": "lll.run.once.v1"},
+            "run.serve": {"json_schema": "lll.run.serve.v1"},
+            "run.reaper": {"json_schema": "lll.run.reaper.v1"},
+            "service.install": {"json_schema": "lll.service.install.v1"},
+            "list": {"json_schema": "lll.list.v1"},
+            "doctor": {"json_schema": "lll.doctor.v1"},
+        },
+        "carriers": SUPPORTED_CARRIERS,
+        "executors": {"shell": {"implemented": True}},
+        "presets": DEFAULT_PRESETS,
+        "runner": {"claim": True, "lease": True, "reaper": True, "max_concurrent": 1},
+        "service_targets": ["systemd", "launchd", "windows-task"],
+    }
 
 
 def slugify(value: str) -> str:
@@ -412,9 +502,14 @@ status: initialized
     cfg = {"version": 1, "mode": "lll", "workdir": str(wd), "default_executor": "shell", "lease_ttl_seconds": args.lease_ttl, "repo": args.repo or None, "git": {"use_worktree": bool(args.repo), "branch_prefix": "agent-loop/", "delivery": "handoff", "commit_policy": "on_verified_success"}, "verify": {"default_cmd": args.verify or None}}
     write_config(wd, cfg)
     event(wd, task_id=None, event_name="workdir_created", status="ok", message="LLL workdir initialized", artifacts=["mission.md", "internal/lll-config.json"])
+    name = workdir_name_report(wd)
     if args.json:
-        print(json.dumps({"workdir": str(wd), "config": str(config_path(wd))}, indent=2, ensure_ascii=False))
+        print_json(json_envelope("lll.init.v1", True, workdir=str(wd), config=str(config_path(wd)), name=name))
     else:
+        if not name["ok"]:
+            print(f"warning: non-recommended workdir name ({name['reason']}): {wd.name}", file=sys.stderr)
+            if name.get("suggested_name"):
+                print(f"suggested name: {name['suggested_name']}", file=sys.stderr)
         print(wd)
 
 
@@ -448,7 +543,7 @@ def cmd_task_add(args: argparse.Namespace) -> None:
     write_task_files(wd, task)
     event(wd, task_id=tid, event_name="queued", status="ok", message=args.title, artifacts=[task["out"] + "task.md"], carrier=args.carrier)
     if args.json:
-        print(json.dumps(task, indent=2, ensure_ascii=False))
+        print_json(json_envelope("lll.task.add.v1", True, workdir=str(wd), task=task))
     else:
         print(f"added {tid} -> {task['out']}")
 
@@ -459,7 +554,7 @@ def cmd_task_list(args: argparse.Namespace) -> None:
     if not args.all:
         tasks = [t for t in tasks if t.get("status") not in {"done", "succeeded", "cancelled"}]
     if args.json:
-        print(json.dumps(tasks, indent=2, ensure_ascii=False))
+        print_json(json_envelope("lll.task.list.v1", True, workdir=str(wd), tasks=tasks))
         return
     if not tasks:
         print("no tasks")
@@ -471,7 +566,7 @@ def cmd_task_list(args: argparse.Namespace) -> None:
 def cmd_task_set_status(args: argparse.Namespace) -> None:
     task = set_task_status(Path(args.workdir).expanduser().resolve(), args.id, args.status, note=args.note, error=args.error)
     if args.json:
-        print(json.dumps(task, indent=2, ensure_ascii=False))
+        print_json(json_envelope("lll.task.set_status.v1", True, workdir=str(Path(args.workdir).expanduser().resolve()), task=task))
     else:
         print(f"{args.id} -> {args.status}")
 
@@ -488,7 +583,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     wd = Path(args.workdir).expanduser().resolve()
     summary = status_summary(wd)
     if args.json:
-        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        print_json(json_envelope("lll.status.v1", True, **summary))
         return
     print(f"workdir: {wd}")
     print(f"layout: {summary['layout']}")
@@ -549,11 +644,24 @@ def validate_workdir(workdir: Path, *, mode: str = "auto") -> tuple[bool, list[s
 def cmd_validate(args: argparse.Namespace) -> None:
     wd = Path(args.workdir).expanduser().resolve()
     ok, messages = validate_workdir(wd, mode=args.mode)
+    name = workdir_name_report(wd)
+    warnings: list[str] = []
+    if not name["ok"]:
+        msg = f"non-recommended workdir name ({name['reason']}): {name['name']}"
+        if args.strict_name:
+            ok = False
+            messages.append(msg)
+        else:
+            warnings.append(msg)
     if args.json:
-        print(json.dumps({"workdir": str(wd), "ok": ok, "messages": messages}, indent=2, ensure_ascii=False))
+        print_json(json_envelope("lll.validate.v1", ok, workdir=str(wd), messages=messages, warnings=warnings, name=name))
     else:
         if messages:
             print("\n".join(messages))
+        for warning in warnings:
+            print(f"warning: {warning}", file=sys.stderr)
+            if name.get("suggested_name"):
+                print(f"suggested name: {name['suggested_name']}", file=sys.stderr)
         if ok:
             print(f"LLL workdir structure valid ({layout_kind(wd)}, {args.mode})")
     raise SystemExit(0 if ok else 1)
@@ -969,14 +1077,15 @@ def cmd_list_workdirs(args: argparse.Namespace) -> None:
         for p in sorted([x for x in root.iterdir() if x.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True):
             markers = [m for m in ["mission.md", "internal/tasks.jsonl", "internal/recovery-state.md", "tasks.jsonl"] if (p / m).exists()]
             if markers or args.all:
-                rows.append({"name": p.name, "path": str(p), "is_lll": bool(markers), "markers": markers, "mtime": datetime.fromtimestamp(p.stat().st_mtime).astimezone().isoformat(timespec="seconds")})
+                rows.append({"name": p.name, "path": str(p), "is_lll": bool(markers), "markers": markers, "mtime": datetime.fromtimestamp(p.stat().st_mtime).astimezone().isoformat(timespec="seconds"), "name_validation": workdir_name_report(p)})
             if args.limit and len(rows) >= args.limit:
                 break
     if args.json:
-        print(json.dumps({"root": str(root), "workdirs": rows}, indent=2, ensure_ascii=False))
+        print_json(json_envelope("lll.list.v1", True, root=str(root), workdirs=rows))
     else:
         for r in rows:
-            print(f"- {r['name']} [{'lll' if r['is_lll'] else 'dir'}] {r['path']}")
+            name_mark = "" if r["name_validation"]["ok"] else f" name-warning={r['name_validation']['reason']}"
+            print(f"- {r['name']} [{'lll' if r['is_lll'] else 'dir'}]{name_mark} {r['path']}")
 
 
 def cmd_doctor(args: argparse.Namespace) -> None:
@@ -999,9 +1108,14 @@ def cmd_doctor(args: argparse.Namespace) -> None:
     if args.workdir:
         wd = Path(args.workdir).expanduser().resolve()
         check("workdir", wd.exists(), str(wd))
+        name = workdir_name_report(wd)
+        if args.strict_name:
+            check("workdir_name", name["ok"], name["reason"] if not name["ok"] else name["name"])
         if wd.exists():
             valid, messages = validate_workdir(wd, mode=args.mode)
             check("workdir_validate", valid, "; ".join(messages[:5]) if messages and not valid else f"valid ({layout_kind(wd)}, {args.mode})")
+    else:
+        name = None
     report = {
         "schema": "lll.doctor.v1",
         "ok": all(c["ok"] for c in checks),
@@ -1009,10 +1123,12 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         "executable": str(executable),
         "source_dir": str(source_dir),
         "default_root": str(root),
+        "workdir_name": name,
+        "capabilities": capabilities_report(),
         "checks": checks,
     }
     if args.json:
-        print(json.dumps(report, indent=2, ensure_ascii=False))
+        print_json(report)
     else:
         print(f"lll {__version__}")
         for c in checks:
@@ -1031,12 +1147,12 @@ def build_parser() -> argparse.ArgumentParser:
     task = sub.add_parser("task", help="manage tasks")
     tsub = task.add_subparsers(dest="task_cmd", required=True)
     a = tsub.add_parser("add", help="add a task")
-    a.add_argument("workdir"); a.add_argument("--id"); a.add_argument("--title", required=True); a.add_argument("--goal", required=True); a.add_argument("--carrier", default="lll"); a.add_argument("--preset", default="manual"); a.add_argument("--priority", type=int, default=10); a.add_argument("--depends-on", action="append", default=[]); a.add_argument("--acceptance", action="append", default=[]); a.add_argument("--inputs", action="append", default=[]); a.add_argument("--executor", default="shell", choices=["shell"]); a.add_argument("--command"); a.add_argument("--verify"); a.add_argument("--timeout", type=int, default=3600); a.add_argument("--lease-ttl", type=int); a.add_argument("--max-attempts", type=int, default=2); a.add_argument("--repo"); a.add_argument("--cwd"); a.add_argument("--use-worktree", dest="use_worktree", action="store_true", default=None); a.add_argument("--no-worktree", dest="use_worktree", action="store_false"); a.add_argument("--delivery", choices=["handoff", "local-commit"], default="handoff"); a.add_argument("--out", default=""); a.add_argument("--json", action="store_true"); a.set_defaults(func=cmd_task_add)
+    a.add_argument("workdir"); a.add_argument("--id"); a.add_argument("--title", required=True); a.add_argument("--goal", required=True); a.add_argument("--carrier", default="lll"); a.add_argument("--preset", default="manual"); a.add_argument("--priority", type=int, default=10); a.add_argument("--depends-on", action="append", default=[]); a.add_argument("--acceptance", action="append", default=[]); a.add_argument("--inputs", action="append", default=[]); a.add_argument("--executor", default="shell", choices=SUPPORTED_EXECUTORS); a.add_argument("--command"); a.add_argument("--verify"); a.add_argument("--timeout", type=int, default=3600); a.add_argument("--lease-ttl", type=int); a.add_argument("--max-attempts", type=int, default=2); a.add_argument("--repo"); a.add_argument("--cwd"); a.add_argument("--use-worktree", dest="use_worktree", action="store_true", default=None); a.add_argument("--no-worktree", dest="use_worktree", action="store_false"); a.add_argument("--delivery", choices=["handoff", "local-commit"], default="handoff"); a.add_argument("--out", default=""); a.add_argument("--json", action="store_true"); a.set_defaults(func=cmd_task_add)
     l = tsub.add_parser("list", help="list tasks"); l.add_argument("workdir"); l.add_argument("--all", action="store_true"); l.add_argument("--json", action="store_true"); l.set_defaults(func=cmd_task_list)
     ss = tsub.add_parser("set-status", help="set task status"); ss.add_argument("workdir"); ss.add_argument("id"); ss.add_argument("status"); ss.add_argument("--note", default=""); ss.add_argument("--error"); ss.add_argument("--json", action="store_true"); ss.set_defaults(func=cmd_task_set_status)
 
     s = sub.add_parser("status", help="show workdir status"); s.add_argument("workdir"); s.add_argument("--all", action="store_true"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_status)
-    s = sub.add_parser("validate", help="validate a workdir"); s.add_argument("workdir"); s.add_argument("--mode", choices=["auto", "full", "lite"], default="auto"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_validate)
+    s = sub.add_parser("validate", help="validate a workdir"); s.add_argument("workdir"); s.add_argument("--mode", choices=["auto", "full", "lite"], default="auto"); s.add_argument("--strict-name", action="store_true"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_validate)
     s = sub.add_parser("event", help="append an event"); s.add_argument("workdir"); s.add_argument("--task-id"); s.add_argument("--event", required=True); s.add_argument("--status", default="info"); s.add_argument("--message", default=""); s.add_argument("--artifact", action="append", default=[]); s.add_argument("--carrier", default="lll"); s.add_argument("--actor", default="lll"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_event)
     s = sub.add_parser("checkpoint", help="rewrite recovery-state.md"); s.add_argument("workdir"); s.add_argument("--status", default="active"); s.add_argument("--phase", default="working"); s.add_argument("--checkpoint", default="manual_checkpoint"); s.add_argument("--next-action", default="continue next task"); s.add_argument("--running", default=""); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_checkpoint)
 
@@ -1051,7 +1167,7 @@ def build_parser() -> argparse.ArgumentParser:
     si = svsub.add_parser("install", help="generate/install service wrapper"); si.add_argument("workdir"); si.add_argument("--target", required=True, choices=["systemd", "launchd", "windows-task"]); si.add_argument("--user", action="store_true"); si.add_argument("--name"); si.add_argument("--interval", type=int, default=300); si.add_argument("--runner-bin"); si.add_argument("--apply", action="store_true"); si.add_argument("--no-enable", action="store_true"); si.add_argument("--json", action="store_true"); si.set_defaults(func=cmd_service_install)
 
     lw = sub.add_parser("list", help="list probable LLL workdirs under a root"); lw.add_argument("--root", default="~/lll-work"); lw.add_argument("--all", action="store_true"); lw.add_argument("--limit", type=int, default=50); lw.add_argument("--json", action="store_true"); lw.set_defaults(func=cmd_list_workdirs)
-    d = sub.add_parser("doctor", help="check CLI readiness and optionally validate a workdir"); d.add_argument("workdir", nargs="?"); d.add_argument("--root", default="~/lll-work"); d.add_argument("--mode", choices=["auto", "full", "lite"], default="auto"); d.add_argument("--create-root", action="store_true"); d.add_argument("--json", action="store_true"); d.set_defaults(func=cmd_doctor)
+    d = sub.add_parser("doctor", help="check CLI readiness and optionally validate a workdir"); d.add_argument("workdir", nargs="?"); d.add_argument("--root", default="~/lll-work"); d.add_argument("--mode", choices=["auto", "full", "lite"], default="auto"); d.add_argument("--strict-name", action="store_true"); d.add_argument("--create-root", action="store_true"); d.add_argument("--json", action="store_true"); d.set_defaults(func=cmd_doctor)
 
     # Backward-compatible flat helper commands.
     a = sub.add_parser("add-task", help=argparse.SUPPRESS); a.add_argument("workdir"); a.add_argument("--id"); a.add_argument("--title", required=True); a.add_argument("--goal", required=True); a.add_argument("--carrier", default="lll"); a.add_argument("--preset", default="manual"); a.add_argument("--priority", type=int, default=10); a.add_argument("--depends-on", action="append", default=[]); a.add_argument("--acceptance", action="append", default=[]); a.add_argument("--inputs", action="append", default=[]); a.add_argument("--max-attempts", type=int, default=2); a.add_argument("--out", default=""); a.set_defaults(func=lambda x: cmd_task_add(argparse.Namespace(**{**vars(x), "executor": "shell", "command": None, "verify": None, "timeout": 3600, "lease_ttl": None, "repo": None, "cwd": None, "use_worktree": None, "delivery": "handoff", "json": False})))

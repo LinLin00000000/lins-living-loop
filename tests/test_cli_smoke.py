@@ -29,16 +29,27 @@ class LLLCliSmokeTests(unittest.TestCase):
         data = json.loads(run("doctor", "--json", "--root", str(ROOT)).stdout)
         self.assertEqual(data["schema"], "lll.doctor.v1")
         self.assertTrue(data["ok"])
+        self.assertTrue(data["capabilities"]["json_envelope"])
+        self.assertIn("task.add", data["capabilities"]["commands"])
+        self.assertTrue(data["capabilities"]["workdir"]["name_validation"])
 
     def test_init_task_validate(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             wd = Path(td) / "work"
-            run("init", str(wd), "--objective", "smoke")
-            run("task", "add", str(wd), "--title", "demo", "--goal", "write marker", "--command", "printf ok > marker.txt", "--verify", "test -f marker.txt", "--max-attempts", "1")
+            init_report = json.loads(run("init", str(wd), "--objective", "smoke", "--json").stdout)
+            self.assertEqual(init_report["schema"], "lll.init.v1")
+            self.assertTrue(init_report["ok"])
+            add_report = json.loads(run("task", "add", str(wd), "--title", "demo", "--goal", "write marker", "--command", "printf ok > marker.txt", "--verify", "test -f marker.txt", "--max-attempts", "1", "--json").stdout)
+            self.assertEqual(add_report["schema"], "lll.task.add.v1")
+            self.assertEqual(add_report["task"]["id"], "T001")
             cp = run("status", str(wd), "--json")
             data = json.loads(cp.stdout)
+            self.assertEqual(data["schema"], "lll.status.v1")
             self.assertEqual(data["counts"].get("pending"), 1)
-            run("validate", str(wd))
+            validate_report = json.loads(run("validate", str(wd), "--json").stdout)
+            self.assertEqual(validate_report["schema"], "lll.validate.v1")
+            self.assertTrue(validate_report["ok"])
+            self.assertFalse(validate_report["name"]["ok"])
             rc = run("run", "once", str(wd), "--json")
             self.assertEqual(rc.returncode, 0)
             run_report = json.loads(rc.stdout)
@@ -55,19 +66,40 @@ class LLLCliSmokeTests(unittest.TestCase):
             checkpoint_report = json.loads(run("checkpoint", str(wd), "--checkpoint", "smoke", "--json").stdout)
             self.assertEqual(checkpoint_report["schema"], "lll.checkpoint.v1")
 
-    def test_task_add_accepts_and_records_carrier(self) -> None:
+    def test_task_metadata_carrier_preset_executor(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            wd = Path(td) / "work"
-            run("init", str(wd), "--objective", "carrier")
-            run("task", "add", str(wd), "--title", "demo", "--goal", "goal", "--carrier", "agent_cli")
-            data = json.loads(run("status", str(wd), "--json").stdout)
-            task = data["tasks"][0]
+            wd = Path(td) / "20260620-162323_cli-metadata"
+            run("init", str(wd), "--objective", "metadata")
+            report = json.loads(run("task", "add", str(wd), "--title", "research", "--goal", "inspect", "--carrier", "agent_cli", "--preset", "deep-research", "--executor", "shell", "--command", "true", "--json").stdout)
+            task = report["task"]
             self.assertEqual(task["carrier"], "agent_cli")
+            self.assertEqual(task["preset"], "deep-research")
+            self.assertEqual(task["executor"], "shell")
             task_file = (wd / "internal" / "agents" / "T001" / "task.md").read_text(encoding="utf-8")
             self.assertIn("carrier: agent_cli", task_file)
-            events = [json.loads(line) for line in (wd / "internal" / "runs.jsonl").read_text(encoding="utf-8").splitlines() if line]
+            events = [(json.loads(line)) for line in (wd / "internal" / "runs.jsonl").read_text(encoding="utf-8").splitlines() if line]
             queued = [e for e in events if e.get("event") == "queued"][-1]
             self.assertEqual(queued["carrier"], "agent_cli")
+            listed = json.loads(run("task", "list", str(wd), "--json").stdout)
+            self.assertEqual(listed["schema"], "lll.task.list.v1")
+            self.assertEqual(listed["tasks"][0]["carrier"], "agent_cli")
+
+    def test_workdir_name_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            bad = Path(td) / "20260620-no-time"
+            run("init", str(bad), "--objective", "bad name")
+            report = json.loads(run("validate", str(bad), "--json").stdout)
+            self.assertTrue(report["ok"])
+            self.assertFalse(report["name"]["ok"])
+            strict = run("validate", str(bad), "--json", "--strict-name", check=False)
+            strict_report = json.loads(strict.stdout)
+            self.assertNotEqual(strict.returncode, 0)
+            self.assertFalse(strict_report["ok"])
+            self.assertIn("non-recommended workdir name", "\n".join(strict_report["messages"]))
+            root = Path(td)
+            listing = json.loads(run("list", "--root", str(root), "--all", "--json").stdout)
+            self.assertEqual(listing["schema"], "lll.list.v1")
+            self.assertFalse(listing["workdirs"][0]["name_validation"]["ok"])
 
     def test_failed_task_and_reaper(self) -> None:
         with tempfile.TemporaryDirectory() as td:
