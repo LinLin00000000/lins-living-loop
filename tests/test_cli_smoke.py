@@ -130,6 +130,19 @@ class LLLCliSmokeTests(unittest.TestCase):
             self.assertTrue(any(service_dir.glob("*.plist")))
             self.assertTrue(any(service_dir.glob("*.ps1")))
 
+    def test_audit_append_and_closeout(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wd = Path(td) / "20260702-120000_audit-closeout"
+            run("init", str(wd), "--objective", "audit")
+            audit = json.loads(run("audit", "append", str(wd), "--stream", "trace", "--field", "type=correction", "--field", "item=demo", "--field", "status=superseded", "--message", "corrected", "--json").stdout)
+            self.assertEqual(audit["schema"], "lll.audit.append.v1")
+            rows = [json.loads(line) for line in (wd / "internal" / "traceability.jsonl").read_text(encoding="utf-8").splitlines() if line]
+            self.assertEqual(rows[-1]["type"], "correction")
+            closeout = json.loads(run("closeout", str(wd), "--json", "--write-report").stdout)
+            self.assertEqual(closeout["schema"], "lll.closeout.v1")
+            self.assertTrue(closeout["ok"])
+            self.assertTrue((wd / "internal" / "closeout-report.json").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

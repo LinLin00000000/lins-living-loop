@@ -33,7 +33,7 @@ VALID_STATUS = {
     "pending", "ready", "leased", "running", "verifying", "succeeded",
     "failed_retryable", "failed_terminal", "cancelled",
     # Legacy/supervisor aliases kept for existing workdirs.
-    "in_progress", "blocked", "done", "failed",
+    "in_progress", "blocked", "done", "completed", "failed",
 }
 CLAIMABLE_STATUS = {"pending", "ready", "failed_retryable"}
 ACTIVE_STATUS = {"leased", "running", "verifying", "in_progress"}
@@ -283,6 +283,8 @@ def capabilities_report() -> dict[str, Any]:
             "task.set_status": {"json_schema": "lll.task.set_status.v1"},
             "status": {"json_schema": "lll.status.v1"},
             "validate": {"json_schema": "lll.validate.v1"},
+            "audit.append": {"json_schema": "lll.audit.append.v1"},
+            "closeout": {"json_schema": "lll.closeout.v1"},
             "event": {"json_schema": "lll.event.v1"},
             "checkpoint": {"json_schema": "lll.checkpoint.v1"},
             "run.once": {"json_schema": "lll.run.once.v1"},
@@ -552,7 +554,7 @@ def cmd_task_list(args: argparse.Namespace) -> None:
     wd = Path(args.workdir).expanduser().resolve()
     tasks = load_tasks(wd)
     if not args.all:
-        tasks = [t for t in tasks if t.get("status") not in {"done", "succeeded", "cancelled"}]
+        tasks = [t for t in tasks if t.get("status") not in {"done", "completed", "succeeded", "cancelled"}]
     if args.json:
         print_json(json_envelope("lll.task.list.v1", True, workdir=str(wd), tasks=tasks))
         return
@@ -589,7 +591,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     print(f"layout: {summary['layout']}")
     print("tasks:", ", ".join(f"{k}={v}" for k, v in sorted(summary["counts"].items())) or "none")
     for t in summary["tasks"]:
-        if args.all or t.get("status") not in {"done", "succeeded", "cancelled"}:
+        if args.all or t.get("status") not in {"done", "completed", "succeeded", "cancelled"}:
             print(f"{t.get('id')} [{t.get('status')}] p{t.get('priority')} {t.get('executor','shell')}/{t.get('preset')} - {t.get('title')}")
 
 
@@ -630,14 +632,15 @@ def validate_workdir(workdir: Path, *, mode: str = "auto") -> tuple[bool, list[s
         for dep in t.get("depends_on", []) or []:
             if dep not in ids and dep not in [x.get("id") for x in tasks]:
                 ok = False; messages.append(f"task {tid} has missing dependency {dep}")
-        try:
-            out = ensure_safe_relative_out(workdir, t.get("out") or default_task_out(workdir, tid), tid)
-        except SystemExit as e:
-            ok = False; messages.append(f"task {tid} invalid out path: {e}"); continue
-        td = workdir / out
-        for rel in ["task.md", "status.json", "log.txt", "handoff.md", "artifacts"]:
-            if not (td / rel).exists():
-                ok = False; messages.append(f"task {tid} missing {out}{rel}")
+        if mode != "lite":
+            try:
+                out = ensure_safe_relative_out(workdir, t.get("out") or default_task_out(workdir, tid), tid)
+            except SystemExit as e:
+                ok = False; messages.append(f"task {tid} invalid out path: {e}"); continue
+            td = workdir / out
+            for rel in ["task.md", "status.json", "log.txt", "handoff.md", "artifacts"]:
+                if not (td / rel).exists():
+                    ok = False; messages.append(f"task {tid} missing {out}{rel}")
     return ok, messages
 
 
@@ -665,6 +668,160 @@ def cmd_validate(args: argparse.Namespace) -> None:
         if ok:
             print(f"LLL workdir structure valid ({layout_kind(wd)}, {args.mode})")
     raise SystemExit(0 if ok else 1)
+
+
+def parse_field_pairs(values: list[str]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for raw in values:
+        if "=" not in raw:
+            raise SystemExit(f"--field must be key=value, got: {raw}")
+        key, value = raw.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise SystemExit(f"empty --field key in: {raw}")
+        try:
+            out[key] = json.loads(value)
+        except json.JSONDecodeError:
+            out[key] = value
+    return out
+
+
+def audit_stream_path(workdir: Path, stream: str) -> Path:
+    if stream == "error":
+        return error_report_path(workdir)
+    if stream == "trace":
+        return traceability_path(workdir)
+    raise SystemExit(f"unsupported audit stream: {stream}")
+
+
+def cmd_audit_append(args: argparse.Namespace) -> None:
+    wd = Path(args.workdir).expanduser().resolve()
+    obj: dict[str, Any] = {}
+    if args.data:
+        try:
+            loaded = json.loads(args.data)
+        except json.JSONDecodeError as e:
+            raise SystemExit(f"invalid --data JSON object: {e}") from e
+        if not isinstance(loaded, dict):
+            raise SystemExit("--data must be a JSON object")
+        obj.update(loaded)
+    obj.update(parse_field_pairs(args.field or []))
+    if args.evidence:
+        existing = obj.get("evidence")
+        if existing is None:
+            obj["evidence"] = args.evidence
+        elif isinstance(existing, list):
+            obj["evidence"] = [*existing, *args.evidence]
+        else:
+            raise SystemExit("evidence field must be a list when combined with --evidence")
+    obj.setdefault("ts", now())
+    if args.stream == "error":
+        obj.setdefault("type", "workflow_error")
+        obj.setdefault("severity", args.severity)
+        obj.setdefault("what_happened", args.message or obj.get("message") or "")
+        obj.setdefault("impact", "unknown")
+        obj.setdefault("fix_or_fallback", "unknown")
+        obj.setdefault("self_maintenance", "unknown")
+    else:
+        obj.setdefault("type", args.type or "change")
+        if args.item:
+            obj.setdefault("item", args.item)
+        obj.setdefault("status", args.status)
+        if args.message:
+            obj.setdefault("notes", args.message)
+    path = audit_stream_path(wd, args.stream)
+    append_jsonl(path, obj)
+    if args.json:
+        print_json(json_envelope("lll.audit.append.v1", True, workdir=str(wd), stream=args.stream, path=str(path), record=obj))
+    else:
+        print(f"appended {args.stream} audit: {rel_to_workdir(wd, path)}")
+
+
+def mission_status(workdir: Path) -> str | None:
+    p = workdir / "mission.md"
+    if not p.exists():
+        return None
+    text = p.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"^status:\s*([^\n]+)", text, flags=re.MULTILINE)
+    return m.group(1).strip() if m else None
+
+
+def validation_verdict(workdir: Path) -> str | None:
+    p = validation_path(workdir)
+    if not p.exists():
+        return None
+    text = p.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"^verdict:\s*([^\n]+)", text, flags=re.MULTILINE | re.I)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r"Verdict:\s*(PASS_WITH_NOTES|PASS|FAIL)", text, flags=re.I)
+    return m.group(1).upper() if m else None
+
+
+def root_deliverables(workdir: Path) -> list[Path]:
+    return sorted(p for p in workdir.glob("*.md") if p.name != "mission.md" and p.is_file())
+
+
+def closeout_report(workdir: Path, *, mode: str, strict_name: bool, language: str, write_report: bool) -> dict[str, Any]:
+    structure_ok, messages = validate_workdir(workdir, mode=mode)
+    name = workdir_name_report(workdir)
+    blocking = list(messages)
+    warnings: list[str] = []
+    if not name["ok"]:
+        msg = f"non-recommended workdir name ({name['reason']}): {name['name']}"
+        (blocking if strict_name else warnings).append(msg)
+    status = mission_status(workdir)
+    if status in {None, "initialized", "active", "blocked"}:
+        warnings.append(f"mission status is not completed/archived: {status or 'missing'}")
+    verdict = validation_verdict(workdir)
+    if verdict is None or verdict.lower() == "pending":
+        warnings.append("validation verdict is missing or pending")
+    elif verdict.upper() == "FAIL":
+        blocking.append("validation verdict is FAIL")
+    if validation_path(workdir).exists():
+        validation_text = validation_path(workdir).read_text(encoding="utf-8", errors="replace").lower()
+        if "uncommitted diff" in validation_text:
+            warnings.append("validation report still mentions uncommitted diff; refresh closeout context after commit/push")
+    deliverables = [rel_to_workdir(workdir, p) for p in root_deliverables(workdir)]
+    if language == "zh":
+        for p in root_deliverables(workdir):
+            text = p.read_text(encoding="utf-8", errors="replace")
+            cjk = len(re.findall(r"[\u4e00-\u9fff]", text))
+            if len(text) > 500 and cjk < 10:
+                warnings.append(f"root deliverable may not be Chinese: {p.name}")
+    report = json_envelope(
+        "lll.closeout.v1",
+        bool(structure_ok and not blocking),
+        workdir=str(workdir),
+        mode=mode,
+        structure_ok=structure_ok,
+        blocking=blocking,
+        warnings=warnings,
+        mission_status=status,
+        validation_verdict=verdict,
+        deliverables=deliverables,
+        name=name,
+    )
+    if write_report:
+        out = state_dir(workdir) / "closeout-report.json"
+        atomic_write(out, json.dumps(report, indent=2, ensure_ascii=False) + "\n")
+        report["report_path"] = str(out)
+    return report
+
+
+def cmd_closeout(args: argparse.Namespace) -> None:
+    wd = Path(args.workdir).expanduser().resolve()
+    report = closeout_report(wd, mode=args.mode, strict_name=args.strict_name, language=args.language, write_report=args.write_report)
+    if args.json:
+        print_json(report)
+    else:
+        for msg in report["blocking"]:
+            print(msg)
+        for msg in report["warnings"]:
+            print(f"warning: {msg}", file=sys.stderr)
+        if report["ok"]:
+            print("LLL closeout checks passed")
+    raise SystemExit(0 if report["ok"] else 1)
 
 
 def cmd_event(args: argparse.Namespace) -> None:
@@ -706,7 +863,7 @@ next_supervisor_action: {args.next_action}
 def claim_next(workdir: Path, owner: str) -> dict[str, Any] | None:
     with queue_lock(workdir, owner):
         tasks = load_tasks(workdir)
-        ids_done = {t.get("id") for t in tasks if t.get("status") in {"done", "succeeded"}}
+        ids_done = {t.get("id") for t in tasks if t.get("status") in {"done", "completed", "succeeded"}}
         for t in tasks:
             if t.get("status") not in CLAIMABLE_STATUS:
                 continue
@@ -1153,6 +1310,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("status", help="show workdir status"); s.add_argument("workdir"); s.add_argument("--all", action="store_true"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_status)
     s = sub.add_parser("validate", help="validate a workdir"); s.add_argument("workdir"); s.add_argument("--mode", choices=["auto", "full", "lite"], default="auto"); s.add_argument("--strict-name", action="store_true"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_validate)
+    s = sub.add_parser("audit", help="append structured error/trace audit records"); asub = s.add_subparsers(dest="audit_cmd", required=True); aa = asub.add_parser("append", help="append one JSONL audit record"); aa.add_argument("workdir"); aa.add_argument("--stream", choices=["error", "trace"], required=True); aa.add_argument("--data", default="", help="JSON object to append"); aa.add_argument("--field", action="append", default=[], help="additional key=value field; value may be JSON"); aa.add_argument("--evidence", action="append", default=[]); aa.add_argument("--message", default=""); aa.add_argument("--severity", default="info"); aa.add_argument("--type", default=""); aa.add_argument("--item", default=""); aa.add_argument("--status", default="supported"); aa.add_argument("--json", action="store_true"); aa.set_defaults(func=cmd_audit_append)
+    s = sub.add_parser("closeout", help="run final LLL closeout checks"); s.add_argument("workdir"); s.add_argument("--mode", choices=["auto", "full", "lite"], default="auto"); s.add_argument("--strict-name", action="store_true"); s.add_argument("--language", choices=["skip", "zh", "en"], default="skip"); s.add_argument("--write-report", action="store_true"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_closeout)
     s = sub.add_parser("event", help="append an event"); s.add_argument("workdir"); s.add_argument("--task-id"); s.add_argument("--event", required=True); s.add_argument("--status", default="info"); s.add_argument("--message", default=""); s.add_argument("--artifact", action="append", default=[]); s.add_argument("--carrier", default="lll"); s.add_argument("--actor", default="lll"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_event)
     s = sub.add_parser("checkpoint", help="rewrite recovery-state.md"); s.add_argument("workdir"); s.add_argument("--status", default="active"); s.add_argument("--phase", default="working"); s.add_argument("--checkpoint", default="manual_checkpoint"); s.add_argument("--next-action", default="continue next task"); s.add_argument("--running", default=""); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_checkpoint)
 

@@ -186,6 +186,7 @@ Recommended `internal/traceability.jsonl` object:
 
 Guidelines:
 - Every object includes `ts` with explicit timezone offset.
+- When the `lll` CLI is available, prefer `lll audit append <workdir> --stream error|trace ...` over rewriting JSONL files by hand; it adds timestamps and appends one valid JSON object.
 - Append only; do not rewrite history for normal updates.
 - Read by tail, time window, task id, or item id on resume.
 - If no issue happened, an initial `type:init` object is enough; do not manufacture a Markdown “no errors” report.
@@ -252,7 +253,7 @@ Empty done directories are a workflow error: repair them before final delivery a
 11. Synthesize into one or more root deliverables.
 12. Append traceability and error JSONL entries as needed.
 13. Validate independently.
-14. After a validator-only pass, run a supervisor closeout loop: consume the verdict, repair safe structural gaps, check the language of every human-facing root deliverable against the requested/current interaction language, update validation task/registry status, refresh `mission.md`, `internal/recovery-state.md`, and `internal/handoff.md`, and append trace/error JSONL entries as needed. Do not deliver while validation is still pending in shared state, expected handoff files are missing, or a primary human-facing deliverable is in the wrong language.
+14. After a validator-only pass, run a supervisor closeout loop: consume the verdict, repair safe structural gaps, check the language of every human-facing root deliverable against the requested/current interaction language, update validation task/registry status, refresh `mission.md`, `internal/recovery-state.md`, and `internal/handoff.md`, and append trace/error JSONL entries as needed. When the CLI is available, run `lll closeout <workdir> --json --write-report` as a final machine-readable structure/closeout probe. Do not deliver while validation is still pending in shared state, expected handoff files are missing, or a primary human-facing deliverable is in the wrong language.
 15. Ensure `mission.md`, root deliverables, `internal/traceability.jsonl`, `internal/error-report.jsonl`, `internal/validation-report.md`, and `internal/handoff.md` are current before final delivery.
 16. Final reply points to deliverables and gives a short conclusion.
 
@@ -282,6 +283,17 @@ Keep the product-level carrier model small. Specific runtimes can map these buck
 
 Do not default to databases, daemons, boards, distributed workflow engines, or project-management systems. They are optional adapters inside the runner/orchestrator bucket, not core LLL concepts.
 
+## Subagent load-shedding and fallback
+
+When using synchronous delegated workers on a custom endpoint or any provider that shows stream errors, slow responses, retries, or API instability, treat the model/API as a scarce shared runtime:
+
+1. Keep child prompts and scope small: bounded candidate counts, explicit stop conditions, short handoffs, and selected evidence instead of full raw dumps.
+2. Prefer deterministic supervisor scripts for mechanical search/fetch/filter steps; reserve delegated workers for judgment and synthesis.
+3. If one worker fails from upstream timeout/stream error, record it in `internal/error-report.jsonl`, reduce scope or concurrency before retrying, and avoid launching an identical large retry.
+4. If a retry fails for the same runtime reason, stop retrying that carrier and switch to inline supervisor, scripted collection, background job, or a different model/provider if available.
+5. For research runs, cache raw evidence under `internal/` but pass/read only compact excerpts into model calls. Large README/source dumps should be filtered by scripts before entering worker context.
+6. Final reports must distinguish workflow failure from evidence absence: a failed worker is not proof that no project/source exists.
+
 ## Synthesis and validation
 
 Use a synthesis worker when there are multiple substantive outputs, conflicts, or a final synthesis/decision. Synthesis reads mission, registry, worker handoffs, and selected artifacts; it writes root deliverables and JSONL audit entries.
@@ -309,7 +321,9 @@ Treat every editable skill as living procedural memory. LLL should improve from 
 
 During LLL, `internal/error-report.jsonl` records internal workflow/runtime abnormalities and repairs, not user goals. Record failed assumptions, worker failures, adapter/quoting/tool issues, path-safety issues, validation failures, queue/registry drift, stale/missing skill guidance, weak triggers, and better verification methods.
 
-After validation, decide explicitly whether to patch a skill, create a new skill after user confirmation, update durable memory for stable user/environment facts, or record why no self-maintenance action is needed.
+After the basic task is complete and validation has produced a usable verdict, run a lightweight workflow retrospective before final delivery. Inspect the current run's workflow reports — especially `internal/validation-report.md`, `internal/error-report.jsonl`, `internal/traceability.jsonl`, worker handoffs/logs when relevant, and the root deliverable shape — and ask what the run teaches about the workflow itself. Look for repeatable improvements: clearer triggers, better decomposition, stronger validation, safer fallback paths, smaller context surfaces, better evidence capture, missing templates/scripts, or unnecessary ceremony that should be removed.
+
+Close the loop with one explicit self-maintenance decision: patch an existing skill when the improvement is procedural and reusable; create a new skill only after user confirmation; update durable memory only for stable user/environment preferences; or record in the validation report / handoff why no self-maintenance action is needed. Keep this retrospective small: it should strengthen future LLL runs without turning every task into a meta-project.
 
 ## Recovery quickstart
 
@@ -374,9 +388,7 @@ Load only when needed:
 - `references/session-lessons-2026-06-16-source-research-traceability.md`: source-research runs should append traceability records for fixed inputs and top-level claims before closeout.
 - `references/session-lessons-2026-06-16-community-evidence-research.md`: community/forum evidence research should use reliability tiers, label blocked/search-snippet evidence as weak, record absence-of-evidence, and separate practical reports from source/architecture analysis.
 - `references/session-lessons-2026-06-16-commercial-agent-ecosystem-research.md`: commercial/forked agent ecosystem comparisons should separate entry, execution, state, and governance layers; treat self-hosted systems as sovereign state/control layers when long-term memory, auditability, migration, or AI-OS goals matter.
-- `references/session-lessons-2026-06-17-public-repo-local-overlay-audit.md`: public repo / skillpack / AIOS kit publishing should split portable base files from ignored local overlays, run deterministic public-audit scans, and verify fresh remote clones plus reachable history before closeout.
 - `references/session-lessons-2026-06-17-aios-kit-friend-install.md`: one-key friend/new-machine deployment for AIOS kits should include a root installer, temp-HOME smoke install, runtime-skill fallback validation for independent first-party skills, bounded install retries, and post-push remote-surface checks.
-- `references/session-lessons-2026-06-18-aios-instance-root.md`: AIOS/distribution installer runs should separate product source from deployed instance root, use safe compatibility symlinks, validate root-derived paths and registry atomicity, protect unmanaged skill targets, and smoke-test from tracked/non-ignored files.
 - `references/lins-living-loop-renaming.md`: naming and product-surface direction.
 - `templates/workdir/`, `templates/task/`, `templates/prompts/`: starter files and worker prompt patterns.
 - `scripts/lll.py`: optional stdlib file helper for init/add-task/status/set-status/event/checkpoint/structure validation. `scripts/dop.py` is a compatibility shim.
