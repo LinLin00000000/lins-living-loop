@@ -164,6 +164,13 @@ The agent should decide the number of files from content shape:
 
 Next steps belong as a section inside the primary deliverable or the relevant deliverable. If there are no meaningful next steps, say so there or omit the section.
 
+Use a simple audience model when deciding what to write or link:
+- **User deliverables**: root Markdown outputs that satisfy the main request for normal use; link these in final replies.
+- **Auxiliary readable files**: optional deep-dive reports, worker/subagent outputs, evidence summaries, or detailed appendices for careful review; link them from the relevant deliverable when they help, not just because they exist.
+- **Machine state files**: queues, JSONL event streams, logs, status probes, raw tool output, and other recovery/audit state; keep them under `internal/` and do not present them as user deliverables.
+
+This is an audience model, not a new directory layout. Preserve the shallow root/`internal/` workdir unless a specific task genuinely needs more structure.
+
 Human-facing prose follows the user's explicitly requested output language; if none is specified, use the current interaction language. Treat this as a hidden default, not metadata. Keep filenames, JSON keys, commands, API names, code identifiers, and stable external proper nouns in English when useful.
 
 This applies to root deliverables such as release summaries, synthesis reports, architecture notes, validation summaries intended for the user, README-style handoffs, and any worker output assigned as a human-facing artifact. Internal scaffolding and template headings may start in English, but copied/generated template prose must be localized before final delivery. A human-facing deliverable in the wrong language is a workflow error and must be repaired or explicitly recorded as a blocker before closing the loop.
@@ -370,7 +377,7 @@ Match the user's language. Keep the chat response short unless the user asked fo
 可继续：<optional next actions already reflected in the report>
 ```
 
-Do not paste huge reports into chat; put them in root deliverables.
+Do not paste huge reports into chat; put them in root deliverables. In the final response, link only artifacts that are meant for the user's current reading or next action. Internal process files under `internal/` are recovery/audit state; do not surface them by default, duplicate them into user-facing summaries, or make them previewable just because they exist. Mention internal checks only as brief status when useful, such as validation/closeout passed.
 
 ## Resources
 
