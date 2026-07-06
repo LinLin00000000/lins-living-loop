@@ -39,6 +39,10 @@ Important: loading this skill is not the same as using LLL. For non-trivial skil
 
 Context-drift rule: when the chat/tool context is large, long-running, or likely to be compacted, externalize the task contract before doing more substantive work. Update `mission.md`, `notes.md` or a root deliverable, `internal/recovery-state.md`, and validation/audit files so the filesystem—not the model's current attention—is the source of truth for objective, constraints, decisions, current status, and acceptance checks.
 
+Context-budget rule: do not create a parallel root-level context recovery system inside an LLL workdir. If context budgeting or hot/warm/cold restore guidance becomes useful, fold restore guidance into `internal/recovery-state.md` and put optional machine-readable budget/risk state in `internal/context-budget.json`. Only split `internal/context-hot-set.json`, `internal/context-cold-index.md`, or `internal/context.events.jsonl` when a CLI/runner actually consumes them. Root files should remain `mission.md` and human-facing deliverables/product docs, not duplicate process state.
+
+Workflow semantic-layer rule: when a task introduces richer workflow concepts—Matter, Decision, Approval, Artifact, Asset, Presentation View, Execution Projection, typed gates, or promotion policy—treat them as semantic layers on top of the LLL workdir, not as a competing runtime state system. Root Markdown/HTML deliverables are Presentation Views. Kanban, GitHub, runners, Feishu, and similar systems are Execution Projections only when they can link back to the LLL workdir and sync/write state safely. Closeout should classify outputs as accepted deliverables, asset candidates, archived evidence, or pruned noise. Do not add a new workflow root, task root, context root, or event root beside LLL unless a real CLI/runner consumes it and the authority boundary is explicit.
+
 ## Mode selection: structure mode vs carrier
 
 LLL has two orthogonal decisions:
