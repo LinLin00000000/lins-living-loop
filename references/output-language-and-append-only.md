@@ -47,7 +47,7 @@ Good JSONL patterns:
 
 On resume:
 
-1. Read compact current-state files first: `mission.md`, `internal/recovery-state.md`, `internal/tasks.jsonl`, `internal/agent-registry.md`, task-local `status.json`, and task-local `handoff.md`.
+1. Read compact current-state files first: `mission.md`, `internal/recovery.json`, `internal/tasks.jsonl`, task-local `status.json`, and relevant task-local `handoff.md`.
 2. Read append-only history only by tail, task id, time window, or entries since the last checkpoint.
 3. If a log becomes important but large, create/update a compact snapshot or handoff instead of forcing future agents to ingest the full history.
 

@@ -31,7 +31,7 @@ Keep old `~/dop-work/` directories resumable and do not bulk-rename old workdirs
 Good balance:
 
 - Public narrative: living loop, caretaker, habitat, growth, recovery, repair, lineage, next loop.
-- Machine paths: keep clear names such as `mission.md`, root task-specific deliverables, `internal/`, `tasks.jsonl`, `runs.jsonl`, `error-report.jsonl`, `traceability.jsonl`, and `recovery-state.md`.
+- Machine paths: keep clear names such as `mission.md`, root task-specific deliverables, `internal/`, `tasks.jsonl`, `runs.jsonl`, `error-report.jsonl`, `traceability.jsonl`, and `recovery.json`.
 - Template headings may carry living language while filenames remain stable, e.g. `Validation Report — Health Check` or a `Next Loop` section inside the primary deliverable.
 
 Avoid over-metaphorizing paths such as `seed.md`, `roots/`, `fruits/`, or `scars.md` as canonical names; they are charming but reduce portability and agent comprehension.
@@ -79,8 +79,8 @@ Mapping:
 | Work | Workers write artifacts and logs |
 | Trace | Append claims/evidence to `internal/traceability.jsonl` |
 | Heal | Append workflow wounds and repairs to `internal/error-report.jsonl` |
-| Validate | Write `internal/validation-report.md` |
-| Hand off | Refresh `internal/handoff.md` and `internal/recovery-state.md` |
+| Validate | Record the canonical verdict in `internal/validation.json` through the CLI |
+| Hand off | Refresh `internal/recovery.json`; keep free-form handoffs task-local |
 | Grow or Close | Put current next steps inside the primary deliverable or relevant root deliverable |
 
 ## Migration stance

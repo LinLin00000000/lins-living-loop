@@ -1,0 +1,12 @@
+{
+  "schema": "lll.validation.v1",
+  "updated_at": "<local-timezone ISO-8601/RFC3339>",
+  "verdict": "pending",
+  "scope": "",
+  "summary": "",
+  "validator": "",
+  "checks": [],
+  "evidence": [],
+  "blocking": [],
+  "notes": []
+}

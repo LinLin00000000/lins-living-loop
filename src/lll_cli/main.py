@@ -2,7 +2,7 @@
 """Lin's Living Loop (`lll`) CLI.
 
 Stdlib-only reference implementation for the LLL file protocol plus a small
-agent-agnostic runner. The CLI intentionally stays boring: plain files, JSONL,
+agent-agnostic runner. The CLI intentionally stays boring: plain files, JSON/JSONL,
 subprocess adapters, and generated service wrappers rather than a database,
 server, dashboard, or planning brain.
 """
@@ -27,7 +27,7 @@ from typing import Any, Iterator
 try:
     from . import __version__
 except ImportError:  # pragma: no cover - direct source-file execution fallback
-    __version__ = "0.1.0"
+    __version__ = "0.2.0"
 
 VALID_STATUS = {
     "pending", "ready", "leased", "running", "verifying", "succeeded",
@@ -102,11 +102,29 @@ def write_jsonl_atomic(path: Path, rows: list[dict[str, Any]]) -> None:
     atomic_write(path, "".join(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n" for r in rows))
 
 
+def read_json_object(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"Invalid JSON in {path}: {e}") from e
+    if not isinstance(value, dict):
+        raise SystemExit(f"Invalid JSON in {path}: expected object")
+    return value
+
+
+def write_json_object(path: Path, value: dict[str, Any]) -> None:
+    atomic_write(path, json.dumps(value, indent=2, ensure_ascii=False) + "\n")
+
+
 def layout_kind(workdir: Path) -> str:
-    if (workdir / "internal").exists() or (workdir / "mission.md").exists():
+    if (workdir / "internal").exists():
         return LAYOUT_CURRENT
     if any((workdir / name).exists() for name in ["collab", "readable", "deliverables", "tasks.jsonl", "runs.jsonl", "agents"]):
         return LAYOUT_LEGACY
+    if (workdir / "mission.md").exists():
+        return LAYOUT_CURRENT
     return LAYOUT_CURRENT
 
 
@@ -126,20 +144,12 @@ def runs_path(workdir: Path) -> Path:
     return state_dir(workdir) / "runs.jsonl"
 
 
-def registry_path(workdir: Path) -> Path:
-    return state_dir(workdir) / "agent-registry.md"
-
-
 def recovery_path(workdir: Path) -> Path:
-    return state_dir(workdir) / "recovery-state.md"
-
-
-def handoff_path(workdir: Path) -> Path:
-    return state_dir(workdir) / "handoff.md"
+    return state_dir(workdir) / "recovery.json"
 
 
 def validation_path(workdir: Path) -> Path:
-    return state_dir(workdir) / "validation-report.md"
+    return state_dir(workdir) / "validation.json"
 
 
 def error_report_path(workdir: Path) -> Path:
@@ -182,10 +192,10 @@ def ensure_safe_relative_out(workdir: Path, out: str, task_id: str | None = None
     except ValueError:
         raise SystemExit("output path must stay inside the LLL workdir")
     root = worker_root_rel(workdir).split("/")
-    if len(rel.parts) < len(root) + 1 or list(rel.parts[:len(root)]) != root:
-        raise SystemExit(f"output path must be under {worker_root_rel(workdir)}/<task-id>/")
+    if len(rel.parts) != len(root) + 1 or list(rel.parts[:len(root)]) != root:
+        raise SystemExit(f"output path must be exactly {worker_root_rel(workdir)}/<task-id>/; put files under that worker root")
     if task_id is not None and rel.parts[len(root)] != task_id:
-        raise SystemExit(f"output path for {task_id} must be under {worker_root_rel(workdir)}/{task_id}/")
+        raise SystemExit(f"output path for {task_id} must be exactly {worker_root_rel(workdir)}/{task_id}/")
     return rel.as_posix().rstrip("/") + "/"
 
 
@@ -275,18 +285,28 @@ def capabilities_report() -> dict[str, Any]:
             "recommended_pattern": RECOMMENDED_WORKDIR_PATTERN,
             "name_validation": True,
             "strict_name_flag": "--strict-name",
+            "state_formats": {
+                "singleton_snapshots": "json",
+                "row_collections": "jsonl_atomic_rewrite_allowed",
+                "append_only_history": "jsonl",
+                "human_semantics": "markdown_or_html",
+            },
+            "canonical_state": ["internal/recovery.json", "internal/validation.json"],
+            "derived_not_stored": ["supervisor_registry", "supervisor_handoff"],
         },
         "commands": {
             "init": {"json_schema": "lll.init.v1"},
             "task.add": {"json_schema": "lll.task.add.v1"},
             "task.list": {"json_schema": "lll.task.list.v1"},
             "task.set_status": {"json_schema": "lll.task.set_status.v1"},
-            "status": {"json_schema": "lll.status.v1"},
+            "status": {"json_schema": "lll.status.v1", "compact_flag": "--compact"},
             "validate": {"json_schema": "lll.validate.v1"},
             "audit.append": {"json_schema": "lll.audit.append.v1"},
             "closeout": {"json_schema": "lll.closeout.v1"},
             "event": {"json_schema": "lll.event.v1"},
             "checkpoint": {"json_schema": "lll.checkpoint.v1"},
+            "validation.show": {"json_schema": "lll.validation.show.v1"},
+            "validation.set": {"json_schema": "lll.validation.set.v1"},
             "run.once": {"json_schema": "lll.run.once.v1"},
             "run.serve": {"json_schema": "lll.run.serve.v1"},
             "run.reaper": {"json_schema": "lll.run.reaper.v1"},
@@ -491,14 +511,35 @@ status: initialized
     for rel, text in {
         "internal/tasks.jsonl": "",
         "internal/runs.jsonl": "",
-        "internal/agent-registry.md": "# Agent / Worker Registry\n\n| id | role | carrier | status | output |\n|---|---|---|---|---|\n| lll | CLI runner/reference implementation | local process | available | internal/agents/* |\n",
-        "internal/validation-report.md": "# Validation Report\n\n```text\nverdict: pending\n```\n",
-        "internal/handoff.md": "# Internal LLL Handoff\n\nstatus: initialized\n",
-        "internal/recovery-state.md": f"# Recovery State\n\nlast_updated: {ts}\nstatus: initialized\nnext_action: add tasks or run the queue\n",
         "internal/logs/supervisor.log": f"{ts} initialized {wd}\n",
         "internal/logs/runner.log": "",
     }.items():
         atomic_write(wd / rel, text)
+    write_json_object(recovery_path(wd), {
+        "schema": "lll.recovery.v1",
+        "updated_at": ts,
+        "status": "initialized",
+        "phase": "setup",
+        "checkpoint": "workdir_created",
+        "next_action": "add tasks or run the queue",
+        "active_tasks": [],
+        "blocked_tasks": [],
+        "running_processes": [],
+        "resume_order": ["mission.md", "internal/recovery.json", "internal/tasks.jsonl"],
+        "read_if_needed": ["internal/agents/<task-id>/handoff.md", "root task deliverables", "JSONL audit tails"],
+    })
+    write_json_object(validation_path(wd), {
+        "schema": "lll.validation.v1",
+        "updated_at": ts,
+        "verdict": "pending",
+        "scope": "",
+        "summary": "",
+        "validator": "",
+        "checks": [],
+        "evidence": [],
+        "blocking": [],
+        "notes": [],
+    })
     append_jsonl(error_report_path(wd), {"ts": ts, "type": "init", "severity": "info", "what_happened": "LLL workdir initialized", "evidence": ["mission.md"], "impact": "none", "fix_or_fallback": "n/a", "self_maintenance": "n/a"})
     append_jsonl(traceability_path(wd), {"ts": ts, "type": "init", "item": "workdir", "evidence": ["mission.md"], "status": "supported", "notes": "LLL workdir initialized by lll CLI"})
     cfg = {"version": 1, "mode": "lll", "workdir": str(wd), "default_executor": "shell", "lease_ttl_seconds": args.lease_ttl, "repo": args.repo or None, "git": {"use_worktree": bool(args.repo), "branch_prefix": "agent-loop/", "delivery": "handoff", "commit_policy": "on_verified_success"}, "verify": {"default_cmd": args.verify or None}}
@@ -578,12 +619,26 @@ def status_summary(workdir: Path) -> dict[str, Any]:
     counts: dict[str, int] = {}
     for t in tasks:
         counts[str(t.get("status", "unknown"))] = counts.get(str(t.get("status", "unknown")), 0) + 1
-    return {"workdir": str(workdir), "layout": layout_kind(workdir), "counts": counts, "tasks": tasks}
+    return {
+        "workdir": str(workdir),
+        "layout": layout_kind(workdir),
+        "counts": counts,
+        "tasks": tasks,
+        "recovery": read_json_object(recovery_path(workdir)) if recovery_path(workdir).exists() else None,
+        "validation": read_json_object(validation_path(workdir)) if validation_path(workdir).exists() else None,
+    }
 
 
 def cmd_status(args: argparse.Namespace) -> None:
     wd = Path(args.workdir).expanduser().resolve()
     summary = status_summary(wd)
+    if args.compact and args.json:
+        tasks = summary.pop("tasks")
+        summary["active_tasks"] = [
+            {key: task.get(key) for key in ["id", "title", "status", "out", "depends_on"]}
+            for task in tasks
+            if task.get("status") not in {"done", "completed", "succeeded", "cancelled"}
+        ]
     if args.json:
         print_json(json_envelope("lll.status.v1", True, **summary))
         return
@@ -602,7 +657,7 @@ def validate_workdir(workdir: Path, *, mode: str = "auto") -> tuple[bool, list[s
         mode = "full" if tasks_path(workdir).exists() else "lite"
     required = [workdir / "mission.md"]
     if mode != "lite":
-        required.extend([tasks_path(workdir), runs_path(workdir), recovery_path(workdir), registry_path(workdir), handoff_path(workdir), validation_path(workdir), error_report_path(workdir), traceability_path(workdir)])
+        required.extend([tasks_path(workdir), runs_path(workdir), recovery_path(workdir), validation_path(workdir), error_report_path(workdir), traceability_path(workdir)])
     for p in required:
         if not p.exists():
             ok = False
@@ -611,6 +666,24 @@ def validate_workdir(workdir: Path, *, mode: str = "auto") -> tuple[bool, list[s
         if p.exists():
             try:
                 read_jsonl(p)
+            except SystemExit as e:
+                ok = False
+                messages.append(str(e))
+    for p, expected_schema in [(recovery_path(workdir), "lll.recovery.v1"), (validation_path(workdir), "lll.validation.v1")]:
+        if p.exists():
+            try:
+                value = read_json_object(p)
+                if value.get("schema") != expected_schema:
+                    ok = False
+                    messages.append(f"invalid schema in {rel_to_workdir(workdir, p)}: expected {expected_schema}")
+                if expected_schema == "lll.recovery.v1":
+                    for key in ["updated_at", "status", "checkpoint", "next_action", "resume_order"]:
+                        if key not in value:
+                            ok = False
+                            messages.append(f"missing {key} in {rel_to_workdir(workdir, p)}")
+                if expected_schema == "lll.validation.v1" and value.get("verdict") not in {"pending", "PASS", "PASS_WITH_NOTES", "FAIL"}:
+                    ok = False
+                    messages.append(f"invalid verdict in {rel_to_workdir(workdir, p)}")
             except SystemExit as e:
                 ok = False
                 messages.append(str(e))
@@ -750,12 +823,56 @@ def validation_verdict(workdir: Path) -> str | None:
     p = validation_path(workdir)
     if not p.exists():
         return None
-    text = p.read_text(encoding="utf-8", errors="replace")
-    m = re.search(r"^verdict:\s*([^\n]+)", text, flags=re.MULTILINE | re.I)
-    if m:
-        return m.group(1).strip()
-    m = re.search(r"Verdict:\s*(PASS_WITH_NOTES|PASS|FAIL)", text, flags=re.I)
-    return m.group(1).upper() if m else None
+    value = read_json_object(p)
+    verdict = value.get("verdict")
+    return str(verdict) if verdict is not None else None
+
+
+def cmd_validation_show(args: argparse.Namespace) -> None:
+    wd = Path(args.workdir).expanduser().resolve()
+    value = read_json_object(validation_path(wd))
+    if args.json:
+        print_json(json_envelope("lll.validation.show.v1", True, workdir=str(wd), validation=value))
+    else:
+        print(json.dumps(value, indent=2, ensure_ascii=False))
+
+
+def cmd_validation_set(args: argparse.Namespace) -> None:
+    wd = Path(args.workdir).expanduser().resolve()
+    value = read_json_object(validation_path(wd))
+    if args.data:
+        try:
+            supplied = json.loads(args.data)
+        except json.JSONDecodeError as e:
+            raise SystemExit(f"invalid --data JSON object: {e}") from e
+        if not isinstance(supplied, dict):
+            raise SystemExit("--data must be a JSON object")
+        value.update(supplied)
+    for key in ["verdict", "scope", "summary", "validator"]:
+        supplied = getattr(args, key)
+        if supplied is not None:
+            value[key] = supplied
+    if args.evidence:
+        value["evidence"] = list(args.evidence)
+    verdict = str(value.get("verdict", "pending"))
+    if verdict not in {"pending", "PASS", "PASS_WITH_NOTES", "FAIL"}:
+        raise SystemExit("verdict must be pending, PASS, PASS_WITH_NOTES, or FAIL")
+    value["schema"] = "lll.validation.v1"
+    value["updated_at"] = now()
+    value.setdefault("scope", "")
+    value.setdefault("summary", "")
+    value.setdefault("validator", "")
+    value.setdefault("checks", [])
+    value.setdefault("evidence", [])
+    value.setdefault("blocking", [])
+    value.setdefault("notes", [])
+    write_json_object(validation_path(wd), value)
+    obj = event(wd, task_id=None, event_name="validation_updated", status="ok" if verdict != "FAIL" else "error", message=verdict, artifacts=[rel_to_workdir(wd, validation_path(wd))])
+    report = json_envelope("lll.validation.set.v1", True, workdir=str(wd), validation=value, event=obj)
+    if args.json:
+        print_json(report)
+    else:
+        print(f"validation -> {verdict}")
 
 
 def root_deliverables(workdir: Path) -> list[Path]:
@@ -778,10 +895,6 @@ def closeout_report(workdir: Path, *, mode: str, strict_name: bool, language: st
         warnings.append("validation verdict is missing or pending")
     elif verdict.upper() == "FAIL":
         blocking.append("validation verdict is FAIL")
-    if validation_path(workdir).exists():
-        validation_text = validation_path(workdir).read_text(encoding="utf-8", errors="replace").lower()
-        if "uncommitted diff" in validation_text:
-            warnings.append("validation report still mentions uncommitted diff; refresh closeout context after commit/push")
     deliverables = [rel_to_workdir(workdir, p) for p in root_deliverables(workdir)]
     if language == "zh":
         for p in root_deliverables(workdir):
@@ -838,20 +951,29 @@ def cmd_checkpoint(args: argparse.Namespace) -> None:
     tasks = load_tasks(wd)
     active = [t["id"] for t in tasks if t.get("status") in ACTIVE_STATUS]
     blocked = [t["id"] for t in tasks if t.get("status") == "blocked"]
-    text = f"""# Recovery State
-
-```text
-status: {args.status}
-last_updated: {now()}
-current_phase: {args.phase}
-last_safe_checkpoint: {args.checkpoint}
-active_tasks: {', '.join(active) if active else 'none'}
-blocked_tasks: {', '.join(blocked) if blocked else 'none'}
-running_processes: {args.running or 'unknown/none'}
-next_supervisor_action: {args.next_action}
-```
-"""
-    atomic_write(recovery_path(wd), text)
+    value = read_json_object(recovery_path(wd))
+    if args.data:
+        try:
+            supplied = json.loads(args.data)
+        except json.JSONDecodeError as e:
+            raise SystemExit(f"invalid --data JSON object: {e}") from e
+        if not isinstance(supplied, dict):
+            raise SystemExit("--data must be a JSON object")
+        value.update(supplied)
+    value.update({
+        "schema": "lll.recovery.v1",
+        "updated_at": now(),
+        "status": args.status,
+        "phase": args.phase,
+        "checkpoint": args.checkpoint,
+        "next_action": args.next_action,
+        "active_tasks": active,
+        "blocked_tasks": blocked,
+        "running_processes": [item.strip() for item in args.running.split(",") if item.strip()],
+    })
+    if args.resume_order:
+        value["resume_order"] = list(args.resume_order)
+    write_json_object(recovery_path(wd), value)
     obj = event(wd, task_id=None, event_name="checkpoint", status="ok", message=args.checkpoint, artifacts=[rel_to_workdir(wd, recovery_path(wd))])
     report = {"schema": "lll.checkpoint.v1", "ok": True, "workdir": str(wd), "recovery_state": str(recovery_path(wd)), "active_tasks": active, "blocked_tasks": blocked, "event": obj}
     if args.json:
@@ -1232,7 +1354,7 @@ def cmd_list_workdirs(args: argparse.Namespace) -> None:
     rows = []
     if root.exists():
         for p in sorted([x for x in root.iterdir() if x.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True):
-            markers = [m for m in ["mission.md", "internal/tasks.jsonl", "internal/recovery-state.md", "tasks.jsonl"] if (p / m).exists()]
+            markers = [m for m in ["mission.md", "internal/tasks.jsonl", "internal/recovery.json", "tasks.jsonl"] if (p / m).exists()]
             if markers or args.all:
                 rows.append({"name": p.name, "path": str(p), "is_lll": bool(markers), "markers": markers, "mtime": datetime.fromtimestamp(p.stat().st_mtime).astimezone().isoformat(timespec="seconds"), "name_validation": workdir_name_report(p)})
             if args.limit and len(rows) >= args.limit:
@@ -1308,12 +1430,17 @@ def build_parser() -> argparse.ArgumentParser:
     l = tsub.add_parser("list", help="list tasks"); l.add_argument("workdir"); l.add_argument("--all", action="store_true"); l.add_argument("--json", action="store_true"); l.set_defaults(func=cmd_task_list)
     ss = tsub.add_parser("set-status", help="set task status"); ss.add_argument("workdir"); ss.add_argument("id"); ss.add_argument("status"); ss.add_argument("--note", default=""); ss.add_argument("--error"); ss.add_argument("--json", action="store_true"); ss.set_defaults(func=cmd_task_set_status)
 
-    s = sub.add_parser("status", help="show workdir status"); s.add_argument("workdir"); s.add_argument("--all", action="store_true"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_status)
+    s = sub.add_parser("status", help="show workdir status"); s.add_argument("workdir"); s.add_argument("--all", action="store_true"); s.add_argument("--compact", action="store_true", help="omit completed task records from JSON output"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_status)
     s = sub.add_parser("validate", help="validate a workdir"); s.add_argument("workdir"); s.add_argument("--mode", choices=["auto", "full", "lite"], default="auto"); s.add_argument("--strict-name", action="store_true"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_validate)
     s = sub.add_parser("audit", help="append structured error/trace audit records"); asub = s.add_subparsers(dest="audit_cmd", required=True); aa = asub.add_parser("append", help="append one JSONL audit record"); aa.add_argument("workdir"); aa.add_argument("--stream", choices=["error", "trace"], required=True); aa.add_argument("--data", default="", help="JSON object to append"); aa.add_argument("--field", action="append", default=[], help="additional key=value field; value may be JSON"); aa.add_argument("--evidence", action="append", default=[]); aa.add_argument("--message", default=""); aa.add_argument("--severity", default="info"); aa.add_argument("--type", default=""); aa.add_argument("--item", default=""); aa.add_argument("--status", default="supported"); aa.add_argument("--json", action="store_true"); aa.set_defaults(func=cmd_audit_append)
     s = sub.add_parser("closeout", help="run final LLL closeout checks"); s.add_argument("workdir"); s.add_argument("--mode", choices=["auto", "full", "lite"], default="auto"); s.add_argument("--strict-name", action="store_true"); s.add_argument("--language", choices=["skip", "zh", "en"], default="skip"); s.add_argument("--write-report", action="store_true"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_closeout)
     s = sub.add_parser("event", help="append an event"); s.add_argument("workdir"); s.add_argument("--task-id"); s.add_argument("--event", required=True); s.add_argument("--status", default="info"); s.add_argument("--message", default=""); s.add_argument("--artifact", action="append", default=[]); s.add_argument("--carrier", default="lll"); s.add_argument("--actor", default="lll"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_event)
-    s = sub.add_parser("checkpoint", help="rewrite recovery-state.md"); s.add_argument("workdir"); s.add_argument("--status", default="active"); s.add_argument("--phase", default="working"); s.add_argument("--checkpoint", default="manual_checkpoint"); s.add_argument("--next-action", default="continue next task"); s.add_argument("--running", default=""); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_checkpoint)
+    s = sub.add_parser("checkpoint", help="rewrite recovery.json"); s.add_argument("workdir"); s.add_argument("--status", default="active"); s.add_argument("--phase", default="working"); s.add_argument("--checkpoint", default="manual_checkpoint"); s.add_argument("--next-action", default="continue next task"); s.add_argument("--running", default=""); s.add_argument("--resume-order", action="append", default=[]); s.add_argument("--data", default="", help="JSON object merged before standard checkpoint fields"); s.add_argument("--json", action="store_true"); s.set_defaults(func=cmd_checkpoint)
+
+    validation = sub.add_parser("validation", help="read or update validation.json")
+    vsub = validation.add_subparsers(dest="validation_cmd", required=True)
+    vs = vsub.add_parser("show", help="show canonical validation state"); vs.add_argument("workdir"); vs.add_argument("--json", action="store_true"); vs.set_defaults(func=cmd_validation_show)
+    vu = vsub.add_parser("set", help="atomically update canonical validation state"); vu.add_argument("workdir"); vu.add_argument("--verdict", choices=["pending", "PASS", "PASS_WITH_NOTES", "FAIL"]); vu.add_argument("--scope"); vu.add_argument("--summary"); vu.add_argument("--validator"); vu.add_argument("--evidence", action="append", default=[]); vu.add_argument("--data", default="", help="JSON object merged before explicit flags"); vu.add_argument("--json", action="store_true"); vu.set_defaults(func=cmd_validation_set)
 
     r = sub.add_parser("run", help="runner commands")
     rsub = r.add_subparsers(dest="run_cmd", required=True)

@@ -32,6 +32,8 @@ class LLLCliSmokeTests(unittest.TestCase):
         self.assertTrue(data["capabilities"]["json_envelope"])
         self.assertIn("task.add", data["capabilities"]["commands"])
         self.assertTrue(data["capabilities"]["workdir"]["name_validation"])
+        self.assertEqual(data["capabilities"]["workdir"]["state_formats"]["singleton_snapshots"], "json")
+        self.assertIn("internal/recovery.json", data["capabilities"]["workdir"]["canonical_state"])
 
     def test_init_task_validate(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -39,13 +41,25 @@ class LLLCliSmokeTests(unittest.TestCase):
             init_report = json.loads(run("init", str(wd), "--objective", "smoke", "--json").stdout)
             self.assertEqual(init_report["schema"], "lll.init.v1")
             self.assertTrue(init_report["ok"])
+            recovery = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
+            validation = json.loads((wd / "internal" / "validation.json").read_text(encoding="utf-8"))
+            self.assertEqual(recovery["schema"], "lll.recovery.v1")
+            self.assertEqual(validation["schema"], "lll.validation.v1")
+            self.assertFalse((wd / "internal" / "recovery-state.md").exists())
+            self.assertFalse((wd / "internal" / "validation-report.md").exists())
+            self.assertFalse((wd / "internal" / "agent-registry.md").exists())
+            self.assertFalse((wd / "internal" / "handoff.md").exists())
             add_report = json.loads(run("task", "add", str(wd), "--title", "demo", "--goal", "write marker", "--command", "printf ok > marker.txt", "--verify", "test -f marker.txt", "--max-attempts", "1", "--json").stdout)
             self.assertEqual(add_report["schema"], "lll.task.add.v1")
             self.assertEqual(add_report["task"]["id"], "T001")
-            cp = run("status", str(wd), "--json")
+            cp = run("status", str(wd), "--json", "--compact")
             data = json.loads(cp.stdout)
             self.assertEqual(data["schema"], "lll.status.v1")
             self.assertEqual(data["counts"].get("pending"), 1)
+            self.assertNotIn("tasks", data)
+            self.assertEqual(data["active_tasks"][0]["id"], "T001")
+            self.assertEqual(data["recovery"]["schema"], "lll.recovery.v1")
+            self.assertEqual(data["validation"]["verdict"], "pending")
             validate_report = json.loads(run("validate", str(wd), "--json").stdout)
             self.assertEqual(validate_report["schema"], "lll.validate.v1")
             self.assertTrue(validate_report["ok"])
@@ -63,8 +77,12 @@ class LLLCliSmokeTests(unittest.TestCase):
             self.assertTrue(artifacts)
             event_report = json.loads(run("event", str(wd), "--event", "note", "--message", "json", "--json").stdout)
             self.assertEqual(event_report["schema"], "lll.event.v1")
-            checkpoint_report = json.loads(run("checkpoint", str(wd), "--checkpoint", "smoke", "--json").stdout)
+            checkpoint_report = json.loads(run("checkpoint", str(wd), "--checkpoint", "smoke", "--data", '{"notes":["preserved extension"]}', "--resume-order", "mission.md", "--resume-order", "internal/recovery.json", "--json").stdout)
             self.assertEqual(checkpoint_report["schema"], "lll.checkpoint.v1")
+            recovery = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
+            self.assertEqual(recovery["checkpoint"], "smoke")
+            self.assertEqual(recovery["resume_order"], ["mission.md", "internal/recovery.json"])
+            self.assertEqual(recovery["notes"], ["preserved extension"])
 
     def test_task_metadata_carrier_preset_executor(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -83,6 +101,9 @@ class LLLCliSmokeTests(unittest.TestCase):
             listed = json.loads(run("task", "list", str(wd), "--json").stdout)
             self.assertEqual(listed["schema"], "lll.task.list.v1")
             self.assertEqual(listed["tasks"][0]["carrier"], "agent_cli")
+            nested_out = run("task", "add", str(wd), "--id", "T002", "--title", "bad out", "--goal", "reject nested worker root", "--out", "internal/agents/T002/artifacts/", "--json", check=False)
+            self.assertNotEqual(nested_out.returncode, 0)
+            self.assertIn("must be exactly internal/agents/<task-id>/", nested_out.stderr)
 
     def test_workdir_name_validation(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -100,6 +121,18 @@ class LLLCliSmokeTests(unittest.TestCase):
             listing = json.loads(run("list", "--root", str(root), "--all", "--json").stdout)
             self.assertEqual(listing["schema"], "lll.list.v1")
             self.assertFalse(listing["workdirs"][0]["name_validation"]["ok"])
+
+    def test_legacy_root_queue_with_mission_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wd = Path(td) / "legacy"
+            wd.mkdir()
+            (wd / "mission.md").write_text("# Legacy mission\n", encoding="utf-8")
+            task = {"id": "legacy-1", "title": "legacy task", "status": "pending", "priority": 1}
+            (wd / "tasks.jsonl").write_text(json.dumps(task) + "\n", encoding="utf-8")
+            report = json.loads(run("status", str(wd), "--json").stdout)
+            self.assertEqual(report["layout"], "legacy_or_transitional")
+            self.assertEqual(report["counts"]["pending"], 1)
+            self.assertEqual(report["tasks"][0]["id"], "legacy-1")
 
     def test_failed_task_and_reaper(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -138,6 +171,11 @@ class LLLCliSmokeTests(unittest.TestCase):
             self.assertEqual(audit["schema"], "lll.audit.append.v1")
             rows = [json.loads(line) for line in (wd / "internal" / "traceability.jsonl").read_text(encoding="utf-8").splitlines() if line]
             self.assertEqual(rows[-1]["type"], "correction")
+            validation = json.loads(run("validation", "set", str(wd), "--verdict", "PASS_WITH_NOTES", "--scope", "smoke", "--summary", "checked", "--validator", "unittest", "--evidence", "internal/traceability.jsonl", "--json").stdout)
+            self.assertEqual(validation["schema"], "lll.validation.set.v1")
+            self.assertEqual(validation["validation"]["verdict"], "PASS_WITH_NOTES")
+            shown = json.loads(run("validation", "show", str(wd), "--json").stdout)
+            self.assertEqual(shown["validation"]["validator"], "unittest")
             closeout = json.loads(run("closeout", str(wd), "--json", "--write-report").stdout)
             self.assertEqual(closeout["schema"], "lll.closeout.v1")
             self.assertTrue(closeout["ok"])

@@ -2,7 +2,7 @@
 name: lins-living-loop
 abbreviation: LLL
 description: Use this skill whenever the user asks for Lin's Living Loop, LLL, living loop, DOP, Deep Orchestration Protocol, 深度编排协议, 深度调研, 深入研究, 重型任务, 长时任务, 可恢复执行, 并行 agent, background agent, durable work, or complex multi-step work likely to cause context explosion, API timeouts, upstream instability, long-running execution, workspace reuse, or nontrivial validation. This skill turns chat into a lightweight supervisor, keeps the filesystem as the durable source of truth, chooses the simplest reliable carrier, puts human deliverables at the workdir root beside mission.md, keeps process/audit state under internal/, enforces that human-facing deliverable prose follows the user's requested/current interaction language instead of silently falling back to English templates, and treats skills/workflows as living procedural memory that can repair itself without becoming ceremonial.
-version: 1.1.1
+version: 1.2.0
 author: Lin
 license: MIT
 metadata:
@@ -37,11 +37,19 @@ Do not use full LLL for simple Q&A, quick searches, tiny edits, or tasks safely 
 
 Important: loading this skill is not the same as using LLL. For non-trivial skill/repo/workflow edits—especially changes touching several files, scripts, templates, docs, validation, or git commit/push—create at least an LLL Lite workdir (`mission.md` + compact notes/validation) rather than substituting a chat todo list for durable state.
 
-Context-drift rule: when the chat/tool context is large, long-running, or likely to be compacted, externalize the task contract before doing more substantive work. Update `mission.md`, `notes.md` or a root deliverable, `internal/recovery-state.md`, and validation/audit files so the filesystem—not the model's current attention—is the source of truth for objective, constraints, decisions, current status, and acceptance checks.
+Context-drift rule: when the chat/tool context is large, long-running, or likely to be compacted, externalize the task contract before doing more substantive work. Update `mission.md`, `notes.md` or a root deliverable, `internal/recovery.json`, and validation/audit files so the filesystem—not the model's current attention—is the source of truth for objective, constraints, decisions, current status, and acceptance checks.
 
-Context-budget rule: do not create a parallel root-level context recovery system inside an LLL workdir. If context budgeting or hot/warm/cold restore guidance becomes useful, fold restore guidance into `internal/recovery-state.md` and put optional machine-readable budget/risk state in `internal/context-budget.json`. Only split `internal/context-hot-set.json`, `internal/context-cold-index.md`, or `internal/context.events.jsonl` when a CLI/runner actually consumes them. Root files should remain `mission.md` and human-facing deliverables/product docs, not duplicate process state.
+Context-budget rule: do not create a parallel root-level context recovery system inside an LLL workdir. Keep the current restore order and next action in `internal/recovery.json`; put optional budget/risk state in `internal/context-budget.json` only when a CLI/runner consumes it. Root files should remain `mission.md` and human-facing deliverables/product docs, not duplicate process state.
 
 Workflow semantic-layer rule: when a task introduces richer workflow concepts—Matter, Decision, Approval, Artifact, Asset, Presentation View, Execution Projection, typed gates, or promotion policy—treat them as semantic layers on top of the LLL workdir, not as a competing runtime state system. Root Markdown/HTML deliverables are Presentation Views. Kanban, GitHub, runners, Feishu, and similar systems are Execution Projections only when they can link back to the LLL workdir and sync/write state safely. Closeout should classify outputs as accepted deliverables, asset candidates, archived evidence, or pruned noise. Do not add a new workflow root, task root, context root, or event root beside LLL unless a real CLI/runner consumes it and the authority boundary is explicit.
+
+Machine-state format rule:
+- current singleton snapshots use JSON (`recovery.json`, `validation.json`, task `status.json`);
+- row-oriented collections and append-only history use JSONL (`tasks.jsonl` may be atomically rewritten; `runs.jsonl`, `error-report.jsonl`, and `traceability.jsonl` append);
+- Markdown/HTML are for human-facing deliverables or genuinely free-form natural-language contracts/handoffs, not machine state disguised as prose;
+- agents decide; `lll` CLI/scripts perform deterministic, atomic structured-state mutation;
+- YAML is for human-authored declarative configuration when needed, not runtime state;
+- add SQLite only after real cross-Matter query, concurrency, transaction, or latency pressure appears; JSON/JSONL remain the portable protocol boundary.
 
 ## Mode selection: structure mode vs carrier
 
@@ -72,7 +80,7 @@ Boundary: the skill teaches agents when and how to use LLL/Code Loop; the CLI is
 
 Use **full LLL** when the work has multiple independent research objects, multiple execution tracks, long-running/background work, large evidence, or separate producer/validator roles. For research tasks where the user asks for multiple directions, divergent search, deep research, or parallel agents, treat full LLL as the default and launch independent research directions concurrently where the carrier supports it.
 
-Use **LLL Lite** for single-track work where one agent can finish without context explosion. Lite is still file-backed, but it should stay visibly simple: `mission.md`, maybe `notes.md`, maybe one root deliverable, and optional `internal/validation-report.md`. If the current conversation is already large, Lite is the minimum drift guard even when the task has only one track. Do not manufacture worker directories when there were no real workers.
+Use **LLL Lite** for single-track work where one agent can finish without context explosion. Lite is still file-backed, but it should stay visibly simple: `mission.md`, maybe `notes.md`, maybe one root deliverable, and optional `internal/validation.json`. If the current conversation is already large, Lite is the minimum drift guard even when the task has only one track. Do not manufacture worker directories when there were no real workers.
 
 ## Living loop
 
@@ -87,8 +95,8 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 | Work | Workers write artifacts and logs under `internal/agents/<task-id>/` |
 | Trace | Append claim/source/change records to `internal/traceability.jsonl` |
 | Heal | Append workflow/runtime abnormalities and repairs to `internal/error-report.jsonl` |
-| Validate | Write `internal/validation-report.md` |
-| Hand off | Refresh `internal/handoff.md` and `internal/recovery-state.md` |
+| Validate | Validator writes evidence; supervisor records the canonical verdict with `lll validation set` |
+| Hand off | Refresh `internal/recovery.json`; keep free-form worker handoffs task-local |
 | Grow or Close | Put current next steps inside the primary deliverable or relevant deliverable |
 
 ## Default new workdir; reuse only with a clear signal
@@ -99,8 +107,8 @@ A path to an old workdir is not by itself a reuse signal. Reuse only when there 
 
 When reuse is chosen, read the compact current state first:
 1. `mission.md`
-2. `internal/recovery-state.md`
-3. `internal/tasks.jsonl` and `internal/agent-registry.md`
+2. `lll status <workdir> --json --compact` when available; it projects task counts/records plus `recovery.json` and `validation.json` without creating another stored truth
+3. otherwise read `internal/recovery.json`, `internal/validation.json`, and `internal/tasks.jsonl`
 4. relevant `internal/agents/<task-id>/status.json` and `handoff.md`
 5. top-level task-specific deliverables
 6. tails/slices of `internal/traceability.jsonl`, `internal/error-report.jsonl`, and logs only as needed
@@ -111,7 +119,7 @@ Older layouts remain resumable with loose detection only:
 - transitional: `collab/` + `readable/`;
 - legacy: root `tasks.jsonl`, `runs.jsonl`, `agent-registry.md`, `agents/`, `deliverables/`.
 
-Do not migrate old workdirs unless the user asks. Do not preserve redundant current-layout logic just to be compatible with old structure detection.
+Legacy/transitional layouts remain discoverable, but LLL 0.2 full validation expects the current JSON machine-state format. On an explicit continuation, migrate the active workdir once; never dual-write old Markdown state and new JSON state. Leave unrelated archived workdirs untouched.
 
 ## Minimal workdir
 
@@ -134,10 +142,8 @@ Canonical current layout:
     runs.jsonl                  # append-only event stream
     error-report.jsonl          # append-only workflow/runtime abnormalities and repairs
     traceability.jsonl          # append-only claim/source/change/evidence map
-    agent-registry.md           # worker/status/output map
-    recovery-state.md           # compact resume instructions
-    handoff.md                  # compact internal handoff for future supervisors
-    validation-report.md        # independent validation verdict and evidence
+    recovery.json               # canonical current resume snapshot
+    validation.json             # canonical current validation verdict/evidence pointers
     inputs/                     # raw/reference materials introduced during the run
     logs/
       supervisor.log
@@ -223,7 +229,7 @@ After final validation and delivery, mark `status: completed`. If work resumes, 
 
 Only create `internal/agents/<task-id>/` for real worker contexts, background jobs, independent CLIs, human contributors, runner tasks, or clearly labeled supervisor-inline tasks needed for auditability. Do not create fake Agent 1/2/3 structures when the supervisor did the work inline.
 
-A task marked `done` in `internal/tasks.jsonl` or `internal/agent-registry.md` must have a non-empty worker record:
+A task marked done in `internal/tasks.jsonl` must have a non-empty worker record:
 
 ```text
 internal/agents/<task-id>/
@@ -238,12 +244,12 @@ Empty done directories are a workflow error: repair them before final delivery a
 
 ## Hard invariants
 
-1. Write/update `mission.md`, `internal/recovery-state.md`, the queue when used, and worker `task.md` before launching long work. If context is already large or compaction is likely, refresh the file-backed contract before continuing. In Lite, use compact `mission.md` plus `notes.md` or a root deliverable instead of a fake queue.
+1. Write/update `mission.md`, `internal/recovery.json`, the queue when used, and worker `task.md` before launching long work. If context is already large or compaction is likely, refresh the file-backed contract before continuing. In Lite, use compact `mission.md` plus `notes.md` or a root deliverable instead of a fake queue.
 2. Workers write detailed work only under `internal/agents/<task-id>/` unless explicitly assigned a shared root deliverable.
-3. Shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md`) have one writer: the supervisor or a real runner.
+3. Shared state files (`internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/recovery.json`, `internal/validation.json`) have one writer: the supervisor or a real runner; use the CLI where a mutation command exists.
 4. Raw data, long logs, evidence, drafts, repositories, downloads, and debugging material go under `internal/`.
 5. Synchronous subagents are not durable/background workers; if the parent turn is interrupted, they can be cancelled.
-6. Child worker prompts must include the compact LLL contract: read mission/task/inputs, write under assigned directory, keep handoff short, keep claims traceable, do not edit shared state unless granted, and record blockers with fallback.
+6. Child worker prompts must include the compact LLL contract: read mission/task/inputs, write under assigned directory, keep handoff short, keep claims traceable, do not edit shared state unless granted, and record blockers with fallback. When the worker will materially contribute to a completed LLL task, explicitly require or have the supervisor finalize the root-level worker record (`task.md`, `status.json`, `log.txt`, `handoff.md`) in addition to files under `artifacts/`; an artifact plus an artifact-local handoff alone is not a complete done record.
 7. Runtime-specific carriers are adapters, not the protocol.
 8. Nontrivial LLL requires synthesis plus independent validation before final delivery.
 9. Structure validation is not mission validation.
@@ -260,12 +266,14 @@ Empty done directories are a workflow error: repair them before final delivery a
 7. Choose structure mode: no LLL, LLL Lite, or full LLL.
 8. Choose the lightest honest carrier for each task: inline supervisor, delegated worker, command/job, or runner/orchestrator.
 9. Launch work; make workers write files and return short handoffs. When a runtime supports batching independent synchronous workers, launch independent tasks together instead of serializing them. Sequential child calls are only acceptable when later tasks depend on earlier outputs, or when rate limits/tool constraints require serialization; otherwise record the reason in the handoff or error log.
+   - When creating tasks with the reference CLI, `--priority` takes an integer, not labels such as `high`.
+   - `lll task add --out` is the worker root and must be exactly `internal/agents/<task-id>/`; put report files below it. Do not pass `artifacts/`, a nested directory, or a filename.
 10. Keep supervisor context small: read compact state and handoffs first; read raw artifacts only when needed.
 11. Synthesize into one or more root deliverables.
 12. Append traceability and error JSONL entries as needed.
 13. Validate independently.
-14. After a validator-only pass, run a supervisor closeout loop: consume the verdict, repair safe structural gaps, check the language of every human-facing root deliverable against the requested/current interaction language, update validation task/registry status, refresh `mission.md`, `internal/recovery-state.md`, and `internal/handoff.md`, and append trace/error JSONL entries as needed. When the CLI is available, run `lll closeout <workdir> --json --write-report` as a final machine-readable structure/closeout probe. Do not deliver while validation is still pending in shared state, expected handoff files are missing, or a primary human-facing deliverable is in the wrong language.
-15. Ensure `mission.md`, root deliverables, `internal/traceability.jsonl`, `internal/error-report.jsonl`, `internal/validation-report.md`, and `internal/handoff.md` are current before final delivery.
+14. After a validator-only pass, run a supervisor closeout loop: consume the verdict, repair safe structural gaps, check the language of every human-facing root deliverable against the requested/current interaction language, update the validation task, record the canonical verdict through `lll validation set`, refresh `mission.md` and `internal/recovery.json`, and append trace/error JSONL entries as needed. Then run `lll closeout <workdir> --json --write-report`. Do not deliver while validation is pending, expected worker handoffs are missing, or a primary human-facing deliverable is in the wrong language.
+15. Ensure `mission.md`, root deliverables, `internal/traceability.jsonl`, `internal/error-report.jsonl`, `internal/validation.json`, and `internal/recovery.json` are current before final delivery.
 16. Final reply points to deliverables and gives a short conclusion.
 
 ## Progress updates
@@ -307,7 +315,7 @@ When using synchronous delegated workers on a custom endpoint or any provider th
 
 ## Synthesis and validation
 
-Use a synthesis worker when there are multiple substantive outputs, conflicts, or a final synthesis/decision. Synthesis reads mission, registry, worker handoffs, and selected artifacts; it writes root deliverables and JSONL audit entries.
+Use a synthesis worker when there are multiple substantive outputs, conflicts, or a final synthesis/decision. Synthesis reads mission, task state, worker handoffs, and selected artifacts; it writes root deliverables and JSONL audit entries.
 
 Every nontrivial LLL task needs an independent validation pass by someone other than the producer of the final artifact.
 
@@ -330,15 +338,15 @@ If `FAIL`, create follow-up tasks or record an explicit blocker; do not deliver 
 
 Treat every editable skill as living procedural memory. LLL should improve from its own failures.
 
-During LLL, `internal/error-report.jsonl` records internal workflow/runtime abnormalities and repairs, not user goals. Record failed assumptions, worker failures, adapter/quoting/tool issues, path-safety issues, validation failures, queue/registry drift, stale/missing skill guidance, weak triggers, and better verification methods.
+During LLL, `internal/error-report.jsonl` records internal workflow/runtime abnormalities and repairs, not user goals. Record failed assumptions, worker failures, adapter/quoting/tool issues, path-safety issues, validation failures, queue/status drift, stale/missing skill guidance, weak triggers, and better verification methods.
 
-After the basic task is complete and validation has produced a usable verdict, run a lightweight workflow retrospective before final delivery. Inspect the current run's workflow reports — especially `internal/validation-report.md`, `internal/error-report.jsonl`, `internal/traceability.jsonl`, worker handoffs/logs when relevant, and the root deliverable shape — and ask what the run teaches about the workflow itself. Look for repeatable improvements: clearer triggers, better decomposition, stronger validation, safer fallback paths, smaller context surfaces, better evidence capture, missing templates/scripts, or unnecessary ceremony that should be removed.
+After the basic task is complete and validation has produced a usable verdict, run a lightweight workflow retrospective before final delivery. Inspect the current run's workflow reports — especially `internal/validation.json`, `internal/error-report.jsonl`, `internal/traceability.jsonl`, worker handoffs/logs when relevant, and the root deliverable shape — and ask what the run teaches about the workflow itself. Look for repeatable improvements: clearer triggers, better decomposition, stronger validation, safer fallback paths, smaller context surfaces, better evidence capture, missing templates/scripts, or unnecessary ceremony that should be removed.
 
 Close the loop with one explicit self-maintenance decision: patch an existing skill when the improvement is procedural and reusable; create a new skill only after user confirmation; update durable memory only for stable user/environment preferences; or record in the validation report / handoff why no self-maintenance action is needed. Keep this retrospective small: it should strengthen future LLL runs without turning every task into a meta-project.
 
 ## Recovery quickstart
 
-1. Read `mission.md`, `internal/recovery-state.md`, queue/registry, and recent event-log tail.
+1. Read `mission.md`, `internal/recovery.json`, task/status state, and recent event-log tail.
 2. Identify done, active, blocked, failed, pending, and stale tasks.
 3. Check background processes/jobs if possible.
 4. Reclaim stale in-progress tasks only after checking lease/heartbeat/process/log evidence.
@@ -360,7 +368,7 @@ When LLL is used to create, publish, or maintain a reusable skill, GitHub repo, 
 
 ## Optional local skill memory
 
-LLL's public skill stays portable. User-specific and environment-specific preferences may live in a local-only `SKILL.local.md` next to `SKILL.md`. If it exists, read it near the start of nontrivial LLL work. Treat it as defaults and context, not as the run's source of truth. When a local preference materially affects the current run, copy the relevant decision into `mission.md`, a root deliverable, `internal/traceability.jsonl`, or `internal/handoff.md`.
+LLL's public skill stays portable. User-specific and environment-specific preferences may live in a local-only `SKILL.local.md` next to `SKILL.md`. If it exists, read it near the start of nontrivial LLL work. Treat it as defaults and context, not as the run's source of truth. When a local preference materially affects the current run, copy the relevant decision into `mission.md`, a root deliverable, `internal/recovery.json`, or `internal/traceability.jsonl`.
 
 ## Final response
 
@@ -374,7 +382,7 @@ Match the user's language. Keep the chat response short unless the user asked fo
 - <primary root deliverable, named from the task>
 - <internal/error-report.jsonl>
 - <internal/traceability.jsonl>
-- <internal/validation-report.md>
+- <internal/validation.json>
 
 一句话结论：<short conclusion>
 注意事项：<0-3 caveats>
@@ -395,7 +403,7 @@ Load only when needed:
 - `references/product-surface-noise-and-reuse-output.md`: product-surface guardrails for hidden defaults, error report scope, and reuse deliverables.
 - `references/session-lessons-2026-06-15-compact-layout-jsonl.md`: concrete lesson for compact root deliverables, removing `output/`/index/next-step scaffolding, JSONL audit logs, and generator-surface migration checks.
 - `references/session-lessons-2026-06-15-lll-trigger-vs-execution.md`: concrete lesson that loading the LLL skill is not enough; non-trivial/large-context work should use at least LLL Lite and externalize the task contract before context drift.
-- `references/session-lessons-2026-06-15-validation-closeout.md`: validator-only pass closeout pattern — supervisor repairs safe structural gaps, updates validation task/registry state, refreshes handoff/recovery, and rechecks structure before delivery.
+- `references/session-lessons-2026-06-15-validation-closeout.md`: historical validator-only closeout lesson; current protocol records canonical verdict/recovery through JSON and CLI.
 - `references/session-lessons-2026-06-16-source-research-traceability.md`: source-research runs should append traceability records for fixed inputs and top-level claims before closeout.
 - `references/session-lessons-2026-06-16-community-evidence-research.md`: community/forum evidence research should use reliability tiers, label blocked/search-snippet evidence as weak, record absence-of-evidence, and separate practical reports from source/architecture analysis.
 - `references/session-lessons-2026-06-16-commercial-agent-ecosystem-research.md`: commercial/forked agent ecosystem comparisons should separate entry, execution, state, and governance layers; treat self-hosted systems as sovereign state/control layers when long-term memory, auditability, migration, or AI-OS goals matter.

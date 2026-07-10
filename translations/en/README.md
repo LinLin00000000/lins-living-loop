@@ -53,10 +53,8 @@ Core structure:
     runs.jsonl
     error-report.jsonl       # append-only workflow/runtime exceptions and fixes
     traceability.jsonl       # append-only conclusion/source/change tracking
-    agent-registry.md
-    recovery-state.md
-    handoff.md
-    validation-report.md
+    recovery.json            # current recovery snapshot
+    validation.json          # current validation verdict/evidence pointers
     inputs/
     logs/
     agents/<task-id>/
@@ -67,7 +65,7 @@ Core structure:
       artifacts/
 ```
 
-New workspaces no longer create `output/`, `00-index.md`, or a separate `99-next-steps.md`. Human-readable deliverables go directly in the root directory; next steps are written into the main report or related deliverable; traceability and error reports are now `internal/*.jsonl` for easier appending and validation.
+New workspaces no longer create `output/`, `00-index.md`, a separate `99-next-steps.md`, `agent-registry.md`, or a supervisor `handoff.md`. Tasks and worker status can reconstruct the registry; `recovery.json` owns the current handoff. The format rule is small: JSON for singleton current snapshots, JSONL for row-oriented collections/history, Markdown/HTML for human or long-form semantics, and `lll` CLI for atomic structured mutations.
 
 ## How this loop runs
 
@@ -82,8 +80,8 @@ Seed -> Split -> Work -> Trace -> Heal -> Validate -> Hand off -> Grow or Close
 | Work | Workers write logs, evidence, drafts, and deliverables |
 | Trace | Append to `internal/traceability.jsonl` |
 | Heal | Append to `internal/error-report.jsonl` |
-| Validate | Perform independent acceptance in `internal/validation-report.md` |
-| Hand off | Update `internal/handoff.md` and `internal/recovery-state.md` |
+| Validate | Validator writes evidence; supervisor records `validation.json` with `lll validation set` |
+| Hand off | Update `internal/recovery.json`; keep free-form handoffs task-local |
 | Grow or Close | Write current next steps in the main report / related deliverable |
 
 ## Name and slug
@@ -103,7 +101,7 @@ Agent-first health check entry points:
 ```bash
 lll --version
 lll doctor --json
-lll doctor <workdir> --json
+lll status <workdir> --json --compact
 aios lll doctor --json
 ```
 
@@ -117,14 +115,18 @@ Run directly inside the repository:
   --preset code-loop \
   --command "printf ok > marker.txt" \
   --verify "test -f marker.txt"
-./lll status ~/lll-work/20260608-150000_demo --json
+./lll status ~/lll-work/20260608-150000_demo --json --compact
 ./lll validate ~/lll-work/20260608-150000_demo --json
 ./lll run once ~/lll-work/20260608-150000_demo --json
 ./lll event ~/lll-work/20260608-150000_demo --event note --message "agent checkpoint" --json
 ./lll checkpoint ~/lll-work/20260608-150000_demo --checkpoint "safe point" --json
+./lll validation set ~/lll-work/20260608-150000_demo --verdict PASS --summary "checks passed" --json
+./lll validation show ~/lll-work/20260608-150000_demo --json
 ./lll run reaper ~/lll-work/20260608-150000_demo --json
 ./lll service install ~/lll-work/20260608-150000_demo --target systemd --user --json
 ```
+
+`lll status --json --compact` is the compact Agent recovery projection: one response returns task records/counts, `recovery.json`, and `validation.json` without storing a third source of truth.
 
 It can also be installed as a Python console script (still with only standard-library runtime dependencies):
 
@@ -133,7 +135,7 @@ python3 -m pip install .
 lll --help
 ```
 
-`scripts/lll.py` is now kept as a compatibility shim and forwards to `src/lll_cli`; the old commands `add-task` / `set-status` are still available, but the new documentation prefers `task add` / `task set-status`. The old name `scripts/dop.py` is also kept as a compatibility entry point and forwards to `lll.py`. Old `~/dop-work/` workspaces can also still be read; migration is not forced.
+`scripts/lll.py` remains a compatibility shim forwarding to `src/lll_cli`; old `add-task` / `set-status` commands still work, while current docs prefer `task add` / `task set-status`. `scripts/dop.py` keeps the old name as a compatibility entry point. Old workdirs remain discoverable/readable; explicit continuation under LLL 0.2 performs a one-time JSON machine-state migration rather than dual-writing old Markdown state.
 
 ### Code Loop / Runner boundaries
 
@@ -164,6 +166,8 @@ In Hermes, if it has already been installed as a skill, saying “use LLL” / �
 LLL’s underlying logic remains reliability-first:
 
 - plain files before databases
+- JSON snapshots, JSONL history, Markdown/HTML semantics
+- agent judgment, CLI mutation
 - small scripts before frameworks
 - handoffs before long chat summaries
 - independent validation before delivery

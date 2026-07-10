@@ -1,0 +1,23 @@
+{
+  "schema": "lll.recovery.v1",
+  "updated_at": "<local-timezone ISO-8601/RFC3339>",
+  "status": "initialized",
+  "phase": "setup",
+  "checkpoint": "workdir_created",
+  "next_action": "define or run the next task",
+  "active_tasks": [],
+  "blocked_tasks": [],
+  "running_processes": [],
+  "resume_order": [
+    "mission.md",
+    "internal/recovery.json",
+    "internal/tasks.jsonl"
+  ],
+  "read_if_needed": [
+    "internal/agents/<task-id>/status.json",
+    "internal/agents/<task-id>/handoff.md",
+    "root task deliverables",
+    "JSONL audit tails"
+  ],
+  "notes": []
+}

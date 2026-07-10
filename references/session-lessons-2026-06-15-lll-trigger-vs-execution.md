@@ -14,7 +14,7 @@ For non-trivial skill/repo/workflow edits, the minimum honest use is usually LLL
 
 - create a small workdir;
 - write `mission.md` and optional `notes.md`;
-- record validation evidence under `internal/validation-report.md` or JSONL audit files when useful;
+- record validation evidence under `internal/validation.json` or JSONL audit files when useful;
 - keep final user-facing changes in the real project/repo, not necessarily inside the LLL workdir;
 - link or summarize the validation in the final response.
 
@@ -45,7 +45,7 @@ For these tasks, create or refresh the file-backed contract before continuing su
 
 - `mission.md`: current objective, constraints, success criteria, scope changes, and non-goals;
 - `notes.md` or a root deliverable: compact reasoning/decisions that matter to the user;
-- `internal/recovery-state.md`: current phase, last safe checkpoint, next action, blockers;
-- `internal/validation-report.md` and JSONL audit files: what was actually checked and what changed.
+- `internal/recovery.json`: current phase, last safe checkpoint, next action, blockers;
+- `internal/validation.json` and JSONL audit files: what was actually checked and what changed.
 
 Keep this lightweight. The goal is not ceremony; it is preventing hidden chat state from becoming the only source of truth.

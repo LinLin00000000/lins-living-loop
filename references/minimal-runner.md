@@ -29,14 +29,13 @@ New LLL workdirs use the current compact layout: root `mission.md`, root human-f
 - `internal/runs.jsonl`: append-only event history
 - `internal/error-report.jsonl`: append-only workflow/runtime abnormality and repair records
 - `internal/traceability.jsonl`: append-only claim/source/change/evidence map
-- `internal/recovery-state.md`: compact resume instructions
-- `internal/handoff.md`: compact supervisor handoff for future recovery
-- `internal/validation-report.md`: validation verdict and evidence
+- `internal/recovery.json`: canonical current resume snapshot
+- `internal/validation.json`: canonical current validation verdict and evidence pointers
 - `internal/inputs/`: raw/reference materials introduced during the run
 - `internal/agents/<task-id>/status.json`: per-task current state
 - `internal/agents/<task-id>/handoff.md`: worker handoff
 
-New helper output intentionally does not create `output/`, `00-index.md`, or standalone next-step files. Transitional/legacy workdirs may still contain `collab/`, `readable/`, `deliverables/`, or root-level state; resume them as-is with loose detection rather than migrating or preserving redundant new-layout complexity.
+New helper output intentionally does not create `output/`, `00-index.md`, or standalone next-step files. Transitional/legacy workdirs may still contain `collab/`, `readable/`, `deliverables/`, or root-level state. Leave unrelated archives untouched; when a user explicitly continues one with LLL 0.2, discover it loosely, migrate its active machine state once to current JSON/JSONL placement, and never dual-write old and new state.
 
 ## Task schema
 
@@ -101,11 +100,12 @@ Recommended fields:
 
 1. `init`: create current-layout files and directories.
 2. `add-task`: create queue item and task directory.
-3. `status`: summarize queue counts and active/blocked tasks.
+3. `status`: project queue records/counts plus current recovery/validation snapshots as one JSON response; it does not store a new truth.
 4. `event`: append an event.
 5. `set-status`: update task state and per-task status file.
-6. `checkpoint`: rewrite `internal/recovery-state.md` with latest safe point.
-7. `validate`: check required files, JSONL validity, safe task output paths, legal statuses, dependencies, per-task file presence, and absence of obsolete current-layout output surface. It supports `--mode auto|full|lite`.
+6. `checkpoint`: atomically update `internal/recovery.json` while preserving extension fields.
+7. `validation set/show`: atomically update or read `internal/validation.json`.
+8. `validate`: check required files, JSON/JSONL validity, safe task output paths, legal statuses, dependencies, per-task file presence, and absence of obsolete current-layout output surface. It supports `--mode auto|full|lite`.
 
 `validate` is structure validation. It does not prove the mission is complete, claims are correct, tests passed, or deliverables are useful. Mission validation remains separate.
 
@@ -125,7 +125,7 @@ Reclaim only after checking the worker log/process when possible.
 
 Shared LLL state has one writer at a time.
 
-- In manual LLL Lite, the supervisor owns `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, and `internal/recovery-state.md`.
+- In manual LLL Lite, the supervisor owns `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/recovery.json`, and `internal/validation.json`.
 - In runner mode, the runner owns those shared files or exposes a narrow API/lock for updates.
 - Workers write only `internal/agents/<task-id>/` unless explicitly assigned a root human deliverable.
 
@@ -162,16 +162,16 @@ The helper refuses to reinitialize an existing workdir unless `--force` is expli
 
 For higher confidence, validate at least:
 
-- required core files exist: `mission.md`, `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/agent-registry.md`, `internal/recovery-state.md`, `internal/handoff.md`, `internal/validation-report.md`, `internal/error-report.jsonl`, `internal/traceability.jsonl`;
-- JSONL files parse;
+- required core files exist: `mission.md`, `internal/tasks.jsonl`, `internal/runs.jsonl`, `internal/recovery.json`, `internal/validation.json`, `internal/error-report.jsonl`, `internal/traceability.jsonl`;
+- JSON snapshots have the expected schema; JSONL streams parse;
 - task ids are unique and non-empty;
-- task statuses are one of `pending`, `ready`, `in_progress`, `blocked`, `done`, `failed`, `cancelled`;
+- task statuses are one of the runner states (`pending`, `ready`, `leased`, `running`, `verifying`, `succeeded`, `failed_retryable`, `failed_terminal`, `cancelled`) or supported legacy/supervisor aliases (`in_progress`, `blocked`, `done`, `completed`, `failed`);
 - dependencies point to existing task ids;
-- every task `out` is relative, cannot escape the workdir, and resolves under `internal/agents/<task-id>/` for current workdirs;
+- every task `out` is exactly the layout-specific worker root, normally `internal/agents/<task-id>/`; report files live below it;
 - every real task directory has `task.md`, `status.json`, `log.txt`, `handoff.md`, and `artifacts/`;
 - task-local `status.json` agrees with the queue where practical;
 - no obsolete `output/`, `00-index.md`, or standalone next-step file exists in a new/current workdir;
-- validation and internal handoff files exist before final delivery.
+- canonical `internal/validation.json` and required task-local worker handoffs exist before final delivery.
 
 Even strict structure validation is not mission validation. It only says the recovery surface is coherent enough to inspect.
 
@@ -188,4 +188,4 @@ Treat these as append-only by design:
 - `internal/agents/<task-id>/log.txt`
 - optional `internal/**/events.jsonl`, `journal.md`, `history.md` only if explicitly declared append-only
 
-Resume order should prefer compact state first: `mission.md`, `internal/recovery-state.md`, `internal/tasks.jsonl`, `internal/agent-registry.md`, task-local `status.json`, and `handoff.md`. Then read append-only files only by tail, task id, or entries since the last checkpoint. If a log becomes important but large, write or refresh a compact handoff/snapshot instead of making future agents ingest the whole history.
+Resume order should prefer compact state first: `mission.md`, `internal/recovery.json`, `internal/tasks.jsonl`, task-local `status.json`, and relevant task-local `handoff.md`. Then read append-only files only by tail, task id, or entries since the last checkpoint. Registry views are derived from tasks/status; do not maintain a duplicate registry file.

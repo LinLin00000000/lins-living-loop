@@ -48,7 +48,7 @@ For light or medium single-track tasks, LLL Lite is acceptable and often better.
   notes.md                 # optional compact working notes
   <task-specific-name>.md  # optional human-facing deliverable at the root
   internal/
-    validation-report.md   # optional for nontrivial checks
+    validation.json   # optional for nontrivial checks
     traceability.jsonl     # optional when claims need traceability
     error-report.jsonl     # optional unless a workflow/runtime issue occurs
 ```

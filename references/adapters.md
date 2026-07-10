@@ -163,7 +163,7 @@ hermes chat -q "$(cat internal/agents/T020/task.md)" \
 
 Fallbacks:
 - CLI missing: use current supervisor or synchronous subagent for smaller pieces.
-- Flags differ: run `agent_cli --help`, then record the working command in `agent-registry.md` or project adapter notes.
+- Flags differ: run `agent_cli --help`, then record the working command in the task record or project adapter notes.
 - Output missing: inspect log, mark failed, retry with a narrower prompt.
 
 ## Code-agent adapter

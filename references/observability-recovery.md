@@ -29,12 +29,11 @@ Trace log (`internal/traceability.jsonl`):
 
 Snapshots/current-state files may be rewritten to the current truth:
 - `mission.md`
-- `internal/recovery-state.md`
+- `internal/recovery.json`
 - `internal/tasks.jsonl`
-- `internal/agent-registry.md`
+- `internal/validation.json`
 - `internal/agents/<task-id>/status.json`
 - `internal/agents/<task-id>/handoff.md`
-- `internal/validation-report.md`
 - root deliverables named from the task, such as `architecture-options.md` or `validation-summary.md`
 
 Append-only history files preserve audit order:
@@ -50,8 +49,8 @@ Every append-only entry should use a local-timezone ISO-8601/RFC3339 timestamp.
 ## Resume order
 
 1. Read `mission.md`.
-2. Read `internal/recovery-state.md`.
-3. Inspect queue/registry/status summaries.
+2. Read `internal/recovery.json`.
+3. Inspect task/status summaries.
 4. Read relevant worker handoffs.
 5. Read root deliverables relevant to the question.
 6. Read JSONL audit tails/slices only when needed.
@@ -61,7 +60,7 @@ Every append-only entry should use a local-timezone ISO-8601/RFC3339 timestamp.
 
 When structural drift or missing records are found, repair the smallest useful surface:
 - update `mission.md` if the current contract is stale;
-- reconcile queue/status/handoff files;
+- reconcile task/status files and refresh recovery/validation through the CLI;
 - append a repair event to `internal/runs.jsonl`;
 - append workflow-relevant repairs to `internal/error-report.jsonl`;
 - append evidence/change records to `internal/traceability.jsonl`;

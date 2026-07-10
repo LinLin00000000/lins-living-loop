@@ -13,7 +13,7 @@ status: initialized
 ## Success criteria
 - <Observable criterion>
 - <Required root deliverable, e.g. `architecture-options.md` or `validation-summary.md`, when needed>
-- <Validation expectation under `internal/validation-report.md`>
+- <Validation expectation recorded in `internal/validation.json`>
 
 ## Non-goals
 - <What should not be done in this run?>
@@ -41,7 +41,7 @@ status: initialized
 - Raw inputs, cloned repos, long logs, validation, handoff, recovery state, traceability, and error logs stay under [internal/](internal/).
 - Human-facing deliverables live at the workdir root beside this file; do not create `output/`, `00-index.md`, or standalone next-step files for new workdirs.
 - Human-facing output body text follows the hidden default: the user-specified output language, or the current interaction language if none is specified. Do not add language metadata labels merely to announce the default.
-- Record state changes in this file, [internal/tasks.jsonl](internal/tasks.jsonl), [internal/runs.jsonl](internal/runs.jsonl), and [internal/recovery-state.md](internal/recovery-state.md).
+- Record state changes through the `lll` CLI in [internal/tasks.jsonl](internal/tasks.jsonl), [internal/runs.jsonl](internal/runs.jsonl), [internal/recovery.json](internal/recovery.json), and [internal/validation.json](internal/validation.json); keep this mission contract current.
 - Append JSONL objects to [internal/error-report.jsonl](internal/error-report.jsonl) and [internal/traceability.jsonl](internal/traceability.jsonl); do not reread/rewrite whole logs just to append.
 - Use Markdown links for stable internal/external sources: relative links for files inside this workdir, URLs/absolute paths for stable external resources, and plain text for temporary external files whose location may change.
 - Give brief progress updates for long-running, multi-stage, background, or multi-worker phases.
@@ -57,7 +57,7 @@ Append short timestamped entries when the user changes scope, constraints, outpu
 
 ## Recovery quick start
 1. Read this file and check `updated_at`, `status`, and recent addenda.
-2. Read [internal/recovery-state.md](internal/recovery-state.md).
+2. Read [internal/recovery.json](internal/recovery.json).
 3. Inspect [internal/tasks.jsonl](internal/tasks.jsonl) status counts when present.
 4. Read relevant [internal/agents/<task-id>/handoff.md](internal/agents/) files when workers exist.
 5. Read root task-specific deliverables; inspect JSONL audit tails only as needed.
