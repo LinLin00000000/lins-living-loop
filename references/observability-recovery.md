@@ -68,6 +68,18 @@ When structural drift or missing records are found, repair the smallest useful s
 
 Compatibility repair only restores auditability of the file protocol; it does not prove mission quality.
 
+For a narrow addendum to an older completed workdir, repair and validate the active delta first. Do not backfill unrelated historical worker records for archival symmetry or merely to turn a newer full-workdir validator green. Record legacy-only gaps as compatibility caveats unless they block current recovery, evidence tracing, or acceptance.
+
+## Late worker completion and fallback
+
+When a delegated worker's chat/control-plane completion signal is missing or delayed:
+
+1. Inspect task-local `status.json`, `handoff.md`, expected artifacts, logs, and recent file timestamps.
+2. If the durable outputs meet acceptance, consume them and update shared task state once; do not relaunch the worker.
+3. If outputs are incomplete, explicitly mark the attempt failed, cancelled, or superseded before starting a fallback carrier.
+4. Keep one active carrier per logical role. Late artifacts from a superseded attempt may be reviewed as evidence, but must not overwrite canonical shared state.
+5. Start a final validator only against a frozen deliverable set; record target paths and preferably hashes/version markers so a later edit clearly invalidates the verdict.
+
 ## Error report scope
 
 Do not record normal user goals, newly added requirements, scope additions, or product/design decisions as errors. Put those in `mission.md` addenda, tasks, root deliverables, or `internal/traceability.jsonl`.

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added delta-scaled continuation guidance: narrow corrections/addenda default to one canonical producer path plus one independent validator instead of replaying the original multi-worker topology.
+- Added durable-artifact-first delegated-worker recovery, single-active-carrier fallback, and frozen validation-surface rules to avoid duplicate relaunches and stale verdicts when completion notifications arrive late.
+- Limited continuation repair to the active/changed surface by default; unrelated legacy worker gaps are recorded as compatibility caveats rather than backfilled for archival symmetry.
+
 ## 0.2.0 - 2026-07-10
 
 - Made machine-only singleton state canonical JSON (`recovery.json`, `validation.json`); row-oriented collections/history remain JSONL and human/long-form semantics remain Markdown/HTML.

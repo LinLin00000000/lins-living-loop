@@ -2,7 +2,7 @@
 name: lins-living-loop
 abbreviation: LLL
 description: Use this skill whenever the user asks for Lin's Living Loop, LLL, living loop, DOP, Deep Orchestration Protocol, 深度编排协议, 深度调研, 深入研究, 重型任务, 长时任务, 可恢复执行, 并行 agent, background agent, durable work, or complex multi-step work likely to cause context explosion, API timeouts, upstream instability, long-running execution, workspace reuse, or nontrivial validation. This skill turns chat into a lightweight supervisor, keeps the filesystem as the durable source of truth, chooses the simplest reliable carrier, puts human deliverables at the workdir root beside mission.md, keeps process/audit state under internal/, enforces that human-facing deliverable prose follows the user's requested/current interaction language instead of silently falling back to English templates, and treats skills/workflows as living procedural memory that can repair itself without becoming ceremonial.
-version: 1.2.0
+version: 1.2.1
 author: Lin
 license: MIT
 metadata:
@@ -114,6 +114,8 @@ When reuse is chosen, read the compact current state first:
 6. tails/slices of `internal/traceability.jsonl`, `internal/error-report.jsonl`, and logs only as needed
 
 Classify the new request as extension, correction, workflow addendum, new evidence, validation follow-up, or mission change. Update `mission.md`, append JSONL audit entries, and update/rewrite the relevant root deliverable. Create a new workdir when the mission changed enough that old evidence would contaminate the new task.
+
+For a narrow correction or analytical addendum on an existing completed workdir, scale execution to the delta instead of replaying the original run topology. Reuse frozen inputs and deterministic scripts. Default to one canonical producer path (which may be the inline supervisor) plus one independent validator. Multiple producer workers are justified only by genuinely independent evidence searches or materially different methods—not by writing the same files, manufacturing perspectives, or preserving archival symmetry.
 
 Older layouts remain resumable with loose detection only:
 - transitional: `collab/` + `readable/`;
@@ -268,6 +270,7 @@ Empty done directories are a workflow error: repair them before final delivery a
 9. Launch work; make workers write files and return short handoffs. When a runtime supports batching independent synchronous workers, launch independent tasks together instead of serializing them. Sequential child calls are only acceptable when later tasks depend on earlier outputs, or when rate limits/tool constraints require serialization; otherwise record the reason in the handoff or error log.
    - When creating tasks with the reference CLI, `--priority` takes an integer, not labels such as `high`.
    - `lll task add --out` is the worker root and must be exactly `internal/agents/<task-id>/`; put report files below it. Do not pass `artifacts/`, a nested directory, or a filename.
+   - Name one canonical producer for each shared/root deliverable. Parallel workers may supply evidence or critique, but should not each rebuild the same analyzer, report, or canonical state unless independent implementation is the stated validation method.
 10. Keep supervisor context small: read compact state and handoffs first; read raw artifacts only when needed.
 11. Synthesize into one or more root deliverables.
 12. Append traceability and error JSONL entries as needed.
@@ -312,12 +315,16 @@ When using synchronous delegated workers on a custom endpoint or any provider th
 4. If a retry fails for the same runtime reason, stop retrying that carrier and switch to inline supervisor, scripted collection, background job, or a different model/provider if available.
 5. For research runs, cache raw evidence under `internal/` but pass/read only compact excerpts into model calls. Large README/source dumps should be filtered by scripts before entering worker context.
 6. Final reports must distinguish workflow failure from evidence absence: a failed worker is not proof that no project/source exists.
+7. A missing or late chat completion summary is not proof that the worker failed. Before retrying or switching carriers, inspect the assigned `status.json`, `handoff.md`, expected artifacts, and recent file timestamps. If durable outputs satisfy acceptance, consume them and close the task without relaunching.
+8. Keep at most one active carrier for the same logical role. Before fallback, mark the earlier attempt completed, failed, cancelled, or superseded in the single-writer task state; late outputs from a superseded attempt are evidence to review, not permission to overwrite shared state.
 
 ## Synthesis and validation
 
 Use a synthesis worker when there are multiple substantive outputs, conflicts, or a final synthesis/decision. Synthesis reads mission, task state, worker handoffs, and selected artifacts; it writes root deliverables and JSONL audit entries.
 
 Every nontrivial LLL task needs an independent validation pass by someone other than the producer of the final artifact.
+
+Start the final validator only after the canonical producer has frozen the validation surface. Record the target deliverable paths and, when practical, content hashes or a generation/version marker in the validator task or producer handoff. If the producer changes a target afterward, that verdict is stale: repair the target, update the frozen marker, and rerun the one validator rather than layering a second validator on a moving artifact.
 
 For security-sensitive public release work—especially publishing a repository, package, skill, installer, or template derived from private/local materials—use multiple independent validation perspectives by default. A good minimum is: one deterministic/scripted scan by the supervisor plus at least two independent validator workers with different prompts or emphases, such as secret/privacy leakage, install/runtime safety, and mission/usefulness. If only one validator is practical, record the reason in `internal/error-report.jsonl` or the validation report.
 
@@ -326,6 +333,8 @@ Delegated validators are real LLL workers even when they are synchronous subagen
 Validate two layers:
 1. **Structure validation**: required files exist, JSONL parses, task ids/statuses/dependencies are valid, task output paths stay under the worker directory, per-task files exist for real tasks, no obsolete new-layout `output/` surface exists, and validation/handoff files exist before final delivery.
 2. **Mission validation**: outputs satisfy success criteria, root deliverables exist when needed, human-facing prose uses the chosen language, important claims trace to evidence, assumptions are labeled, failed/blocked tasks were handled, code/tests/builds ran or failures are documented, and the result is useful without raw intermediate context.
+
+For a continued correction/addendum, validate the changed/active surface plus the current canonical recovery/validation snapshots. Do not normalize or backfill unrelated historical worker records solely to make a newer CLI accept an older run. If a full-workdir structure check reports a legacy-only gap that does not compromise the current delta, record it as a compatibility caveat; repair history only when it is needed for current auditability or recovery.
 
 Verdicts:
 - `PASS`: deliverables satisfy the mission criteria.

@@ -81,7 +81,8 @@ Hermes example:
 - `delegate_task` is this adapter: good for bounded parallel reasoning, not durable background work.
 
 Fallbacks:
-- If the subagent times out or would run too long, convert the task to a background process or independent agent CLI.
+- If the parent receives no completion summary, inspect the assigned `status.json`, `handoff.md`, expected artifacts, and recent file timestamps first. A late control-plane notification does not invalidate durable files already written.
+- If the subagent actually timed out or would run too long and durable outputs are incomplete, mark that attempt failed/cancelled/superseded before converting the same logical role to a background process or independent agent CLI. Do not keep two active carriers racing to write the same task state.
 - If it returns a long report in chat, save it to a file and summarize only paths.
 
 ## Foreground script/command

@@ -8,6 +8,7 @@ Read:
 - <lll-workdir>/internal/tasks.jsonl when present
 - relevant worker status/handoffs before raw artifacts
 - root deliverables named from the task
+- the exact frozen target paths and hashes/version marker named in your task; if they are missing or change during validation, report the moving surface instead of validating an assumed final version
 - tails/slices of traceability/error JSONL only as needed
 
 Write:
@@ -16,6 +17,7 @@ Write:
 - <lll-workdir>/internal/agents/<task-id>/handoff.md with PASS, PASS_WITH_NOTES, or FAIL; summarize commands/evidence in `log.txt` and final state in `status.json`
 - do not hand-edit <lll-workdir>/internal/validation.json; the single-writer supervisor records your verdict with `lll validation set`
 - append shared audit streams only when the task explicitly grants shared-state ownership
+- do not repair producer deliverables or shared state; return findings to the supervisor so one producer path remains canonical
 
 Structure checks:
 - Required current-layout files exist and JSON/JSONL parses.
