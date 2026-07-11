@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -34,6 +35,7 @@ class LLLCliSmokeTests(unittest.TestCase):
         self.assertTrue(data["capabilities"]["workdir"]["name_validation"])
         self.assertEqual(data["capabilities"]["workdir"]["state_formats"]["singleton_snapshots"], "json")
         self.assertIn("internal/recovery.json", data["capabilities"]["workdir"]["canonical_state"])
+        self.assertEqual(data["capabilities"]["runner"]["queue_lock_wait_seconds"], 5)
 
     def test_init_task_validate(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -106,6 +108,42 @@ class LLLCliSmokeTests(unittest.TestCase):
             completed = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
             self.assertEqual(completed["active_tasks"], [])
             self.assertEqual(completed["operational_queue"]["nonterminal_count"], 0)
+
+    def test_queue_lock_waits_for_short_contention(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wd = Path(td) / "20260711-190000_queue-contention"
+            run("init", str(wd), "--objective", "short lock contention")
+            release_path = wd / "release-holder"
+            holder_code = (
+                "import time; from pathlib import Path; "
+                "from lll_cli.main import queue_lock; "
+                f"wd=Path({str(wd)!r}); release=Path({str(release_path)!r}); "
+                "lock=queue_lock(wd, 'test-holder'); lock.__enter__(); "
+                "\nwhile not release.exists(): time.sleep(0.01)\n"
+                "lock.__exit__(None, None, None)"
+            )
+            holder = subprocess.Popen([sys.executable, "-c", holder_code], cwd=str(ROOT), env=ENV)
+            owner_path = wd / "internal" / "locks" / "tasks.lock" / "owner.json"
+            deadline = time.monotonic() + 2
+            while not owner_path.exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue(owner_path.exists(), "lock holder did not become ready")
+
+            waiter = subprocess.Popen(
+                [sys.executable, "-m", "lll_cli", "task", "add", str(wd), "--title", "waiter", "--goal", "wait for lock"],
+                cwd=str(ROOT), env=ENV, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+            try:
+                time.sleep(0.1)
+                blocked = waiter.poll() is None
+            finally:
+                release_path.write_text("release\n", encoding="utf-8")
+            stdout, stderr = waiter.communicate(timeout=2)
+            holder.wait(timeout=2)
+            self.assertTrue(blocked, "waiter should still be blocked by the live queue lock")
+            self.assertEqual(waiter.returncode, 0, stderr or stdout)
+            recovery = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
+            self.assertEqual(recovery["operational_queue"]["nonterminal_count"], 1)
 
     def test_task_metadata_carrier_preset_executor(self) -> None:
         with tempfile.TemporaryDirectory() as td:

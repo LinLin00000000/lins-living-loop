@@ -38,6 +38,7 @@ VALID_STATUS = {
 CLAIMABLE_STATUS = {"pending", "ready", "failed_retryable"}
 ACTIVE_STATUS = {"leased", "running", "verifying", "in_progress"}
 TERMINAL_STATUS = {"succeeded", "failed_terminal", "cancelled", "done", "completed", "failed"}
+QUEUE_LOCK_WAIT_SECONDS = 5.0
 LAYOUT_CURRENT = "current_internal_root_outputs"
 LAYOUT_LEGACY = "legacy_or_transitional"
 RECOMMENDED_WORKDIR_PATTERN = "~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case/"
@@ -318,7 +319,7 @@ def capabilities_report() -> dict[str, Any]:
         "carriers": SUPPORTED_CARRIERS,
         "executors": {"shell": {"implemented": True}},
         "presets": DEFAULT_PRESETS,
-        "runner": {"claim": True, "lease": True, "reaper": True, "max_concurrent": 1},
+        "runner": {"claim": True, "lease": True, "reaper": True, "max_concurrent": 1, "queue_lock_wait_seconds": QUEUE_LOCK_WAIT_SECONDS},
         "service_targets": ["systemd", "launchd", "windows-task"],
     }
 
@@ -415,9 +416,10 @@ def update_local_status(workdir: Path, task: dict[str, Any], step: str = "") -> 
 
 
 @contextmanager
-def queue_lock(workdir: Path, owner: str, ttl_seconds: int = 120) -> Iterator[None]:
+def queue_lock(workdir: Path, owner: str, ttl_seconds: int = 120, wait_seconds: float = QUEUE_LOCK_WAIT_SECONDS, poll_seconds: float = 0.05) -> Iterator[None]:
     lock = state_dir(workdir) / "locks" / "tasks.lock"
     lock.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + max(0.0, wait_seconds)
     while True:
         try:
             lock.mkdir()
@@ -436,7 +438,9 @@ def queue_lock(workdir: Path, owner: str, ttl_seconds: int = 120) -> Iterator[No
             if stale:
                 shutil.rmtree(lock, ignore_errors=True)
                 continue
-            raise SystemExit(f"queue locked: {lock}")
+            if time.monotonic() >= deadline:
+                raise SystemExit(f"queue locked after waiting {wait_seconds:g}s: {lock}")
+            time.sleep(max(0.01, poll_seconds))
     try:
         yield
     finally:

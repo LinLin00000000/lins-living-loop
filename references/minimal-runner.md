@@ -139,6 +139,8 @@ When rewriting `internal/tasks.jsonl`:
 
 This keeps recovery simple after crashes.
 
+The reference CLI waits up to a small bounded interval (currently 5 seconds) when another supported queue mutation holds `tasks.lock`. This absorbs ordinary short CLI overlap without forcing every caller to implement retries. Timeout remains an explicit failure, stale-lock reclamation still uses the lock TTL, and this mechanism does not claim to serialize independent workers outside queue mutation or implement the stronger Worksite-wide primary-writer lease.
+
 ## What not to build early
 
 Do not start with a database, queue server, event bus, custom agent protocol, distributed locks, complex daemon, or GUI dashboard. Add those only when plain files have become the bottleneck.
