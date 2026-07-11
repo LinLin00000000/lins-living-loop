@@ -415,6 +415,22 @@ def update_local_status(workdir: Path, task: dict[str, Any], step: str = "") -> 
         f.write(f"{now()} {task.get('status')} {step}\n")
 
 
+def queue_lock_is_stale(lock: Path, owner_path: Path, ttl_seconds: int) -> bool:
+    if owner_path.exists():
+        try:
+            info = json.loads(owner_path.read_text(encoding="utf-8"))
+            created = parse_ts(info.get("created_at"))
+            if created is not None:
+                owner_ttl = int(info.get("ttl_seconds", ttl_seconds))
+                return datetime.now(created.tzinfo or UTC) - created > timedelta(seconds=owner_ttl)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            pass
+    try:
+        return time.time() - lock.stat().st_mtime > ttl_seconds
+    except OSError:
+        return False
+
+
 @contextmanager
 def queue_lock(workdir: Path, owner: str, ttl_seconds: int = 120, wait_seconds: float = QUEUE_LOCK_WAIT_SECONDS, poll_seconds: float = 0.05) -> Iterator[None]:
     lock = state_dir(workdir) / "locks" / "tasks.lock"
@@ -423,19 +439,15 @@ def queue_lock(workdir: Path, owner: str, ttl_seconds: int = 120, wait_seconds: 
     while True:
         try:
             lock.mkdir()
-            atomic_write(lock / "owner.json", json.dumps({"owner": owner, "created_at": now(), "ttl_seconds": ttl_seconds}, indent=2) + "\n")
+            try:
+                atomic_write(lock / "owner.json", json.dumps({"owner": owner, "created_at": now(), "ttl_seconds": ttl_seconds}, indent=2) + "\n")
+            except BaseException:
+                shutil.rmtree(lock, ignore_errors=True)
+                raise
             break
         except FileExistsError:
             owner_path = lock / "owner.json"
-            stale = False
-            if owner_path.exists():
-                try:
-                    info = json.loads(owner_path.read_text(encoding="utf-8"))
-                    created = parse_ts(info.get("created_at"))
-                    stale = created is not None and datetime.now(created.tzinfo or UTC) - created > timedelta(seconds=int(info.get("ttl_seconds", ttl_seconds)))
-                except Exception:
-                    stale = True
-            if stale:
+            if queue_lock_is_stale(lock, owner_path, ttl_seconds):
                 shutil.rmtree(lock, ignore_errors=True)
                 continue
             if time.monotonic() >= deadline:

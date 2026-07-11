@@ -139,7 +139,7 @@ When rewriting `internal/tasks.jsonl`:
 
 This keeps recovery simple after crashes.
 
-The reference CLI waits up to a small bounded interval (currently 5 seconds) when another supported queue mutation holds `tasks.lock`. This absorbs ordinary short CLI overlap without forcing every caller to implement retries. Timeout remains an explicit failure, stale-lock reclamation still uses the lock TTL, and this mechanism does not claim to serialize independent workers outside queue mutation or implement the stronger Worksite-wide primary-writer lease.
+The reference CLI waits up to a small bounded interval (currently 5 seconds) when another supported queue mutation holds `tasks.lock`. This absorbs ordinary short CLI overlap without forcing every caller to implement retries. Timeout remains an explicit failure, stale-lock reclamation still uses the lock TTL, and this mechanism does not claim to serialize independent workers outside queue mutation or implement the stronger Worksite-wide primary-writer lease. If owner metadata is missing or malformed, the lock-directory modification time becomes the conservative TTL fallback instead of causing immediate deletion or a permanently unreclaimable orphan; failure while publishing new owner metadata cleans up the just-created lock.
 
 ## What not to build early
 

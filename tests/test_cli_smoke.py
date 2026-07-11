@@ -145,6 +145,83 @@ class LLLCliSmokeTests(unittest.TestCase):
             recovery = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
             self.assertEqual(recovery["operational_queue"]["nonterminal_count"], 1)
 
+    def test_queue_lock_reclaims_old_orphan_without_owner_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wd = Path(td) / "20260711-191000_orphan-lock"
+            run("init", str(wd), "--objective", "orphan lock recovery")
+            lock_path = wd / "internal" / "locks" / "tasks.lock"
+            lock_path.mkdir()
+            old = time.time() - 10
+            os.utime(lock_path, (old, old))
+            probe_code = (
+                "from pathlib import Path; from lll_cli.main import queue_lock; "
+                f"wd=Path({str(wd)!r}); "
+                "lock=queue_lock(wd, 'reclaimer', ttl_seconds=1, wait_seconds=0.1); "
+                "lock.__enter__(); print('acquired'); lock.__exit__(None, None, None)"
+            )
+            probe = subprocess.run(
+                [sys.executable, "-c", probe_code], cwd=str(ROOT), env=ENV, text=True, capture_output=True,
+            )
+            self.assertEqual(probe.returncode, 0, probe.stderr)
+            self.assertIn("acquired", probe.stdout)
+            self.assertFalse(lock_path.exists())
+
+    def test_queue_lock_uses_directory_ttl_for_malformed_owner_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wd = Path(td) / "20260711-192000_malformed-lock"
+            run("init", str(wd), "--objective", "malformed owner fallback")
+            lock_path = wd / "internal" / "locks" / "tasks.lock"
+            lock_path.mkdir()
+            (lock_path / "owner.json").write_text("{broken", encoding="utf-8")
+            probe_code = (
+                "from pathlib import Path; from lll_cli.main import queue_lock; "
+                f"wd=Path({str(wd)!r}); "
+                "lock=queue_lock(wd, 'waiter', ttl_seconds=10, wait_seconds=0.1); "
+                "lock.__enter__(); print('acquired'); lock.__exit__(None, None, None)"
+            )
+            fresh = subprocess.run(
+                [sys.executable, "-c", probe_code], cwd=str(ROOT), env=ENV, text=True, capture_output=True,
+            )
+            self.assertNotEqual(fresh.returncode, 0)
+            self.assertIn("queue locked after waiting 0.1s", fresh.stderr)
+            self.assertTrue(lock_path.exists())
+
+            old = time.time() - 20
+            os.utime(lock_path, (old, old))
+            stale = subprocess.run(
+                [sys.executable, "-c", probe_code], cwd=str(ROOT), env=ENV, text=True, capture_output=True,
+            )
+            self.assertEqual(stale.returncode, 0, stale.stderr)
+            self.assertIn("acquired", stale.stdout)
+            self.assertFalse(lock_path.exists())
+
+            lock_path.mkdir()
+            (lock_path / "owner.json").write_text('{"ttl_seconds":0}', encoding="utf-8")
+            incomplete = subprocess.run(
+                [sys.executable, "-c", probe_code], cwd=str(ROOT), env=ENV, text=True, capture_output=True,
+            )
+            self.assertNotEqual(incomplete.returncode, 0)
+            self.assertIn("queue locked after waiting 0.1s", incomplete.stderr)
+            self.assertTrue(lock_path.exists())
+
+    def test_queue_lock_cleans_up_when_owner_metadata_publish_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wd = Path(td) / "20260711-193000_owner-publish-failure"
+            run("init", str(wd), "--objective", "owner metadata cleanup")
+            probe_code = (
+                "from pathlib import Path; import lll_cli.main as m; "
+                f"wd=Path({str(wd)!r}); original=m.atomic_write; "
+                "m.atomic_write=lambda path,text: (_ for _ in ()).throw(OSError('publish failed')) if path.name=='owner.json' else original(path,text); "
+                "lock=m.queue_lock(wd, 'publisher'); "
+                "\ntry: lock.__enter__()\nexcept OSError: print('failed-cleanly')\n"
+            )
+            probe = subprocess.run(
+                [sys.executable, "-c", probe_code], cwd=str(ROOT), env=ENV, text=True, capture_output=True,
+            )
+            self.assertEqual(probe.returncode, 0, probe.stderr)
+            self.assertIn("failed-cleanly", probe.stdout)
+            self.assertFalse((wd / "internal" / "locks" / "tasks.lock").exists())
+
     def test_task_metadata_carrier_preset_executor(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             wd = Path(td) / "20260620-162323_cli-metadata"
