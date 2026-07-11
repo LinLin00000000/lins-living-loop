@@ -99,7 +99,7 @@ Recommended fields:
 ## Simple helper lifecycle
 
 1. `init`: create current-layout files and directories.
-2. `add-task`: create queue item and task directory.
+2. `add-task`: create queue item and task directory, then refresh the compact queue discoverability summary in `recovery.json` under the same queue lock.
 3. `status`: project queue records/counts plus current recovery/validation snapshots as one JSON response; it does not store a new truth.
 4. `event`: append an event.
 5. `set-status`: update task state and per-task status file.
@@ -134,7 +134,8 @@ When rewriting `internal/tasks.jsonl`:
 1. read all lines
 2. write a complete `internal/tasks.jsonl.tmp`
 3. replace `internal/tasks.jsonl` atomically
-4. append an event to `internal/runs.jsonl`
+4. refresh `recovery.json.operational_queue` (paths, observation watermark, nonterminal count) while retaining `tasks.jsonl` as the owner
+5. append an event to `internal/runs.jsonl`
 
 This keeps recovery simple after crashes.
 

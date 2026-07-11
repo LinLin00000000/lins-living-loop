@@ -37,6 +37,7 @@ VALID_STATUS = {
 }
 CLAIMABLE_STATUS = {"pending", "ready", "failed_retryable"}
 ACTIVE_STATUS = {"leased", "running", "verifying", "in_progress"}
+TERMINAL_STATUS = {"succeeded", "failed_terminal", "cancelled", "done", "completed", "failed"}
 LAYOUT_CURRENT = "current_internal_root_outputs"
 LAYOUT_LEGACY = "legacy_or_transitional"
 RECOMMENDED_WORKDIR_PATTERN = "~/lll-work/YYYYMMDD-HHMMSS_short-description-in-kebab-case/"
@@ -446,8 +447,33 @@ def load_tasks(workdir: Path) -> list[dict[str, Any]]:
     return read_jsonl(tasks_path(workdir))
 
 
+def recovery_queue_fields(workdir: Path, tasks: list[dict[str, Any]], *, observed_at: str | None = None) -> dict[str, Any]:
+    observed_at = observed_at or now()
+    return {
+        "updated_at": observed_at,
+        "active_tasks": [str(t["id"]) for t in tasks if t.get("status") in ACTIVE_STATUS],
+        "blocked_tasks": [str(t["id"]) for t in tasks if t.get("status") == "blocked"],
+        "operational_queue": {
+            "tasks_path": rel_to_workdir(workdir, tasks_path(workdir)),
+            "runs_path": rel_to_workdir(workdir, runs_path(workdir)),
+            "observed_through": observed_at,
+            "nonterminal_count": sum(1 for t in tasks if t.get("status") not in TERMINAL_STATUS),
+        },
+    }
+
+
+def refresh_recovery_queue(workdir: Path, tasks: list[dict[str, Any]]) -> None:
+    path = recovery_path(workdir)
+    if not path.exists():
+        return
+    recovery = read_json_object(path)
+    recovery.update(recovery_queue_fields(workdir, tasks))
+    write_json_object(path, recovery)
+
+
 def save_tasks(workdir: Path, tasks: list[dict[str, Any]]) -> None:
     write_jsonl_atomic(tasks_path(workdir), tasks)
+    refresh_recovery_queue(workdir, tasks)
 
 
 def set_task_status(workdir: Path, task_id: str, status: str, *, note: str = "", error: str | None = None, claim_id: str | None = None) -> dict[str, Any]:
@@ -525,6 +551,12 @@ status: initialized
         "active_tasks": [],
         "blocked_tasks": [],
         "running_processes": [],
+        "operational_queue": {
+            "tasks_path": "internal/tasks.jsonl",
+            "runs_path": "internal/runs.jsonl",
+            "observed_through": ts,
+            "nonterminal_count": 0,
+        },
         "resume_order": ["mission.md", "internal/recovery.json", "internal/tasks.jsonl"],
         "read_if_needed": ["internal/agents/<task-id>/handoff.md", "root task deliverables", "JSONL audit tails"],
     })
@@ -948,34 +980,31 @@ def cmd_event(args: argparse.Namespace) -> None:
 
 def cmd_checkpoint(args: argparse.Namespace) -> None:
     wd = Path(args.workdir).expanduser().resolve()
-    tasks = load_tasks(wd)
-    active = [t["id"] for t in tasks if t.get("status") in ACTIVE_STATUS]
-    blocked = [t["id"] for t in tasks if t.get("status") == "blocked"]
-    value = read_json_object(recovery_path(wd))
-    if args.data:
-        try:
-            supplied = json.loads(args.data)
-        except json.JSONDecodeError as e:
-            raise SystemExit(f"invalid --data JSON object: {e}") from e
-        if not isinstance(supplied, dict):
-            raise SystemExit("--data must be a JSON object")
-        value.update(supplied)
-    value.update({
-        "schema": "lll.recovery.v1",
-        "updated_at": now(),
-        "status": args.status,
-        "phase": args.phase,
-        "checkpoint": args.checkpoint,
-        "next_action": args.next_action,
-        "active_tasks": active,
-        "blocked_tasks": blocked,
-        "running_processes": [item.strip() for item in args.running.split(",") if item.strip()],
-    })
-    if args.resume_order:
-        value["resume_order"] = list(args.resume_order)
-    write_json_object(recovery_path(wd), value)
+    with queue_lock(wd, "checkpoint"):
+        tasks = load_tasks(wd)
+        value = read_json_object(recovery_path(wd))
+        if args.data:
+            try:
+                supplied = json.loads(args.data)
+            except json.JSONDecodeError as e:
+                raise SystemExit(f"invalid --data JSON object: {e}") from e
+            if not isinstance(supplied, dict):
+                raise SystemExit("--data must be a JSON object")
+            value.update(supplied)
+        value.update(recovery_queue_fields(wd, tasks))
+        value.update({
+            "schema": "lll.recovery.v1",
+            "status": args.status,
+            "phase": args.phase,
+            "checkpoint": args.checkpoint,
+            "next_action": args.next_action,
+            "running_processes": [item.strip() for item in args.running.split(",") if item.strip()],
+        })
+        if args.resume_order:
+            value["resume_order"] = list(args.resume_order)
+        write_json_object(recovery_path(wd), value)
     obj = event(wd, task_id=None, event_name="checkpoint", status="ok", message=args.checkpoint, artifacts=[rel_to_workdir(wd, recovery_path(wd))])
-    report = {"schema": "lll.checkpoint.v1", "ok": True, "workdir": str(wd), "recovery_state": str(recovery_path(wd)), "active_tasks": active, "blocked_tasks": blocked, "event": obj}
+    report = {"schema": "lll.checkpoint.v1", "ok": True, "workdir": str(wd), "recovery_state": str(recovery_path(wd)), "active_tasks": value["active_tasks"], "blocked_tasks": value["blocked_tasks"], "event": obj}
     if args.json:
         print(json.dumps(report, indent=2, ensure_ascii=False))
     else:

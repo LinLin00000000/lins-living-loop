@@ -84,6 +84,29 @@ class LLLCliSmokeTests(unittest.TestCase):
             self.assertEqual(recovery["resume_order"], ["mission.md", "internal/recovery.json"])
             self.assertEqual(recovery["notes"], ["preserved extension"])
 
+    def test_task_mutations_refresh_recovery_queue_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wd = Path(td) / "20260711-180000_recovery-queue"
+            run("init", str(wd), "--objective", "queue recovery consistency")
+            run("checkpoint", str(wd), "--checkpoint", "before enqueue", "--json")
+
+            run("task", "add", str(wd), "--id", "T001", "--title", "queued after checkpoint", "--goal", "prove queue visibility")
+            queued = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
+            self.assertEqual(queued["operational_queue"]["tasks_path"], "internal/tasks.jsonl")
+            self.assertEqual(queued["operational_queue"]["runs_path"], "internal/runs.jsonl")
+            self.assertEqual(queued["operational_queue"]["nonterminal_count"], 1)
+            self.assertEqual(queued["operational_queue"]["observed_through"], queued["updated_at"])
+
+            run("task", "set-status", str(wd), "T001", "in_progress")
+            active = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
+            self.assertEqual(active["active_tasks"], ["T001"])
+            self.assertEqual(active["operational_queue"]["nonterminal_count"], 1)
+
+            run("task", "set-status", str(wd), "T001", "completed")
+            completed = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
+            self.assertEqual(completed["active_tasks"], [])
+            self.assertEqual(completed["operational_queue"]["nonterminal_count"], 0)
+
     def test_task_metadata_carrier_preset_executor(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             wd = Path(td) / "20260620-162323_cli-metadata"
