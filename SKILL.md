@@ -2,7 +2,7 @@
 name: lins-living-loop
 abbreviation: LLL
 description: Use this skill whenever the user asks for Lin's Living Loop, LLL, living loop, DOP, Deep Orchestration Protocol, 深度编排协议, 深度调研, 深入研究, 重型任务, 长时任务, 可恢复执行, 并行 agent, background agent, durable work, or complex multi-step work likely to cause context explosion, API timeouts, upstream instability, long-running execution, workspace reuse, or nontrivial validation. This skill turns chat into a lightweight supervisor, keeps the filesystem as the durable source of truth, chooses the simplest reliable carrier, puts human deliverables at the workdir root beside mission.md, keeps process/audit state under internal/, enforces that human-facing deliverable prose follows the user's requested/current interaction language instead of silently falling back to English templates, and treats skills/workflows as living procedural memory that can repair itself without becoming ceremonial.
-version: 1.2.1
+version: 1.2.2
 author: Lin
 license: MIT
 metadata:
@@ -48,6 +48,7 @@ Machine-state format rule:
 - row-oriented collections and append-only history use JSONL (`tasks.jsonl` may be atomically rewritten; `runs.jsonl`, `error-report.jsonl`, and `traceability.jsonl` append);
 - Markdown/HTML are for human-facing deliverables or genuinely free-form natural-language contracts/handoffs, not machine state disguised as prose;
 - agents decide; `lll` CLI/scripts perform deterministic, atomic structured-state mutation;
+- `phase` plus `internal/tasks.jsonl`/`operational_queue` are authoritative; legacy duplicate aliases such as `current_phase` and `nonterminal_tasks` must not survive a fresh checkpoint, and conflicting aliases block closeout;
 - YAML is for human-authored declarative configuration when needed, not runtime state;
 - add SQLite only after real cross-Matter query, concurrency, transaction, or latency pressure appears; JSON/JSONL remain the portable protocol boundary.
 
@@ -188,6 +189,12 @@ Human-facing prose follows the user's explicitly requested output language; if n
 This applies to root deliverables such as release summaries, synthesis reports, architecture notes, validation summaries intended for the user, README-style handoffs, and any worker output assigned as a human-facing artifact. Internal scaffolding and template headings may start in English, but copied/generated template prose must be localized before final delivery. A human-facing deliverable in the wrong language is a workflow error and must be repaired or explicitly recorded as a blocker before closing the loop.
 
 ## JSONL audit logs
+
+### Research asset retention gate
+
+At the natural close of a research run, the supervising Agent should evaluate the frozen canonical report before offering durable retention. Use a compact 0–100 assessment covering future reuse/decision leverage, uniqueness or reproduction cost, standalone readability/actionability, evidence/provenance quality, and fit with a real long-term owner/maintenance path. State confidence, freshness/shelf-life, the recommended asset type/location, and the strongest caveat.
+
+This is a semantic closeout judgment, not new LLL machine state and not a CLI file-name heuristic. Ask at most once only when the score is at least 65 and a plausible owner exists. Otherwise leave the report in the Worksite without a save prompt. Never promote automatically: a score or `asset_candidate` classification is advice, not authorization. Promotion starts only after explicit user intent, with a separate progress receipt and change set that preserves the original by default. Do not repeat the offer unless the report changed materially.
 
 `internal/error-report.jsonl` and `internal/traceability.jsonl` are append-only logs. JSONL is preferred because these files behave like event streams: future agents can append one object to the end without rereading or rewriting the full file, and structure validation is cheap.
 

@@ -79,12 +79,14 @@ class LLLCliSmokeTests(unittest.TestCase):
             self.assertTrue(artifacts)
             event_report = json.loads(run("event", str(wd), "--event", "note", "--message", "json", "--json").stdout)
             self.assertEqual(event_report["schema"], "lll.event.v1")
-            checkpoint_report = json.loads(run("checkpoint", str(wd), "--checkpoint", "smoke", "--data", '{"notes":["preserved extension"]}', "--resume-order", "mission.md", "--resume-order", "internal/recovery.json", "--json").stdout)
+            checkpoint_report = json.loads(run("checkpoint", str(wd), "--checkpoint", "smoke", "--data", '{"notes":["preserved extension"],"current_phase":"stale","nonterminal_tasks":["ghost"]}', "--resume-order", "mission.md", "--resume-order", "internal/recovery.json", "--json").stdout)
             self.assertEqual(checkpoint_report["schema"], "lll.checkpoint.v1")
             recovery = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
             self.assertEqual(recovery["checkpoint"], "smoke")
             self.assertEqual(recovery["resume_order"], ["mission.md", "internal/recovery.json"])
             self.assertEqual(recovery["notes"], ["preserved extension"])
+            self.assertNotIn("current_phase", recovery)
+            self.assertNotIn("nonterminal_tasks", recovery)
 
     def test_task_mutations_refresh_recovery_queue_summary(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -103,11 +105,30 @@ class LLLCliSmokeTests(unittest.TestCase):
             active = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
             self.assertEqual(active["active_tasks"], ["T001"])
             self.assertEqual(active["operational_queue"]["nonterminal_count"], 1)
+            active["nonterminal_tasks"] = ["T001"]
+            (wd / "internal" / "recovery.json").write_text(json.dumps(active), encoding="utf-8")
 
             run("task", "set-status", str(wd), "T001", "completed")
             completed = json.loads((wd / "internal" / "recovery.json").read_text(encoding="utf-8"))
             self.assertEqual(completed["active_tasks"], [])
             self.assertEqual(completed["operational_queue"]["nonterminal_count"], 0)
+            self.assertNotIn("nonterminal_tasks", completed)
+
+    def test_closeout_blocks_conflicting_legacy_recovery_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wd = Path(td) / "20260717-184000_recovery-alias-drift"
+            run("init", str(wd), "--objective", "detect stale recovery aliases")
+            run("validation", "set", str(wd), "--verdict", "PASS", "--scope", "alias drift", "--summary", "fixture", "--validator", "unittest")
+            recovery_path = wd / "internal" / "recovery.json"
+            recovery = json.loads(recovery_path.read_text(encoding="utf-8"))
+            recovery["current_phase"] = "stale-phase"
+            recovery["nonterminal_tasks"] = ["ghost"]
+            recovery_path.write_text(json.dumps(recovery), encoding="utf-8")
+            cp = run("closeout", str(wd), "--json", check=False)
+            self.assertNotEqual(cp.returncode, 0)
+            report = json.loads(cp.stdout)
+            self.assertIn("recovery legacy field nonterminal_tasks conflicts with internal/tasks.jsonl", report["blocking"])
+            self.assertIn("recovery legacy field current_phase conflicts with canonical phase", report["blocking"])
 
     def test_queue_lock_waits_for_short_contention(self) -> None:
         with tempfile.TemporaryDirectory() as td:

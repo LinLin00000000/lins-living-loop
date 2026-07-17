@@ -483,6 +483,7 @@ def refresh_recovery_queue(workdir: Path, tasks: list[dict[str, Any]]) -> None:
     if not path.exists():
         return
     recovery = read_json_object(path)
+    recovery.pop("nonterminal_tasks", None)
     recovery.update(recovery_queue_fields(workdir, tasks))
     write_json_object(path, recovery)
 
@@ -943,6 +944,22 @@ def closeout_report(workdir: Path, *, mode: str, strict_name: bool, language: st
         warnings.append("validation verdict is missing or pending")
     elif verdict.upper() == "FAIL":
         blocking.append("validation verdict is FAIL")
+    recovery_file = recovery_path(workdir)
+    if recovery_file.exists():
+        recovery = read_json_object(recovery_file)
+        tasks = load_tasks(workdir)
+        expected_nonterminal = [str(t["id"]) for t in tasks if t.get("status") not in TERMINAL_STATUS]
+        if "nonterminal_tasks" in recovery:
+            legacy_nonterminal = [str(item) for item in recovery.get("nonterminal_tasks", [])]
+            if legacy_nonterminal != expected_nonterminal:
+                blocking.append("recovery legacy field nonterminal_tasks conflicts with internal/tasks.jsonl")
+            else:
+                warnings.append("recovery legacy field nonterminal_tasks is deprecated; run lll checkpoint")
+        if "current_phase" in recovery:
+            if str(recovery.get("current_phase", "")) != str(recovery.get("phase", "")):
+                blocking.append("recovery legacy field current_phase conflicts with canonical phase")
+            else:
+                warnings.append("recovery legacy field current_phase is deprecated; run lll checkpoint")
     deliverables = [rel_to_workdir(workdir, p) for p in root_deliverables(workdir)]
     if language == "zh":
         for p in root_deliverables(workdir):
@@ -1007,6 +1024,8 @@ def cmd_checkpoint(args: argparse.Namespace) -> None:
             if not isinstance(supplied, dict):
                 raise SystemExit("--data must be a JSON object")
             value.update(supplied)
+        value.pop("nonterminal_tasks", None)
+        value.pop("current_phase", None)
         value.update(recovery_queue_fields(wd, tasks))
         value.update({
             "schema": "lll.recovery.v1",
