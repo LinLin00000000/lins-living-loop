@@ -123,6 +123,24 @@ class LLLCliSmokeTests(unittest.TestCase):
             self.assertEqual(completed["operational_queue"]["nonterminal_count"], 0)
             self.assertNotIn("nonterminal_tasks", completed)
 
+    def test_status_hides_legacy_and_canonical_terminal_failures_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wd = Path(td) / "20260718-113000_terminal-status"
+            run("init", str(wd), "--objective", "terminal status projection")
+            run("task", "add", str(wd), "--id", "legacy-fail", "--title", "legacy", "--goal", "fail review")
+            run("task", "add", str(wd), "--id", "canonical-fail", "--title", "canonical", "--goal", "fail runner")
+            run("task", "set-status", str(wd), "legacy-fail", "failed")
+            run("task", "set-status", str(wd), "canonical-fail", "failed_terminal")
+            compact = json.loads(run("status", str(wd), "--json", "--compact").stdout)
+            self.assertEqual(compact["active_tasks"], [])
+            self.assertEqual(compact["recovery"]["operational_queue"]["nonterminal_count"], 0)
+            text = run("status", str(wd)).stdout
+            self.assertNotIn("legacy-fail", text)
+            self.assertNotIn("canonical-fail", text)
+            all_text = run("status", str(wd), "--all").stdout
+            self.assertIn("legacy-fail", all_text)
+            self.assertIn("canonical-fail", all_text)
+
     def test_closeout_blocks_conflicting_legacy_recovery_aliases(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             wd = Path(td) / "20260717-184000_recovery-alias-drift"

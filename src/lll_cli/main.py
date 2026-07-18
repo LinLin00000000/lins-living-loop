@@ -686,7 +686,7 @@ def cmd_status(args: argparse.Namespace) -> None:
         summary["active_tasks"] = [
             {key: task.get(key) for key in ["id", "title", "status", "out", "depends_on"]}
             for task in tasks
-            if task.get("status") not in {"done", "completed", "succeeded", "cancelled"}
+            if task.get("status") not in TERMINAL_STATUS
         ]
     if args.json:
         print_json(json_envelope("lll.status.v1", True, **summary))
@@ -695,7 +695,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     print(f"layout: {summary['layout']}")
     print("tasks:", ", ".join(f"{k}={v}" for k, v in sorted(summary["counts"].items())) or "none")
     for t in summary["tasks"]:
-        if args.all or t.get("status") not in {"done", "completed", "succeeded", "cancelled"}:
+        if args.all or t.get("status") not in TERMINAL_STATUS:
             print(f"{t.get('id')} [{t.get('status')}] p{t.get('priority')} {t.get('executor','shell')}/{t.get('preset')} - {t.get('title')}")
 
 
