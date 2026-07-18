@@ -277,7 +277,7 @@ Empty done directories are a workflow error: repair them before final delivery a
 8. Choose the lightest honest carrier for each task: inline supervisor, delegated worker, command/job, or runner/orchestrator.
 9. Launch work; make workers write files and return short handoffs. When a runtime supports batching independent synchronous workers, launch independent tasks together instead of serializing them. Sequential child calls are only acceptable when later tasks depend on earlier outputs, or when rate limits/tool constraints require serialization; otherwise record the reason in the handoff or error log.
    - When creating tasks with the reference CLI, `--priority` takes an integer, not labels such as `high`.
-   - `lll task add --out` is the worker root and must be exactly `internal/agents/<task-id>/`; put report files below it. Do not pass `artifacts/`, a nested directory, or a filename.
+   - `lll task add --out` is the worker root and must be a path **relative to the LLL workdir**, exactly `internal/agents/<task-id>/`; put report files below it. Do not pass an absolute path, `artifacts/`, a nested directory, or a filename.
    - Name one canonical producer for each shared/root deliverable. Parallel workers may supply evidence or critique, but should not each rebuild the same analyzer, report, or canonical state unless independent implementation is the stated validation method.
 10. Keep supervisor context small: read compact state and handoffs first; read raw artifacts only when needed.
 11. Synthesize into one or more root deliverables.
